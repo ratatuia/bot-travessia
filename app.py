@@ -25,6 +25,11 @@ init_db()  # Inicializa o banco de dados
 telegram_service = TelegramService()
 ai_service = AIService()
 
+# ADICIONE A ROTA RAIZ AQUI
+@app.route("/", methods=["GET"])
+def index():
+    return "Bot da Travessia dos Sonhos - Online!", 200
+
 # Funções auxiliares
 def validar_email(email):
     """Verifica se o e-mail está em um formato válido"""
@@ -228,6 +233,13 @@ def health_check():
 # Rota principal do bot
 @app.route("/zap", methods=["POST"])
 def whatsapp_bot():
+    # Adicione estes logs no início da função
+    print("====== NOVA REQUISIÇÃO WEBHOOK ======")
+    print(f"Headers: {dict(request.headers)}")
+    print(f"Form Data: {dict(request.form)}")
+    print(f"JSON Data: {request.get_json()}")
+    print("======================================") 
+        
     # Extrai informações da requisição
     incoming_msg = request.form.get("Body", "").strip()
     sender = request.form.get("From", "")
@@ -855,4 +867,10 @@ if __name__ == "__main__":
     registrar_log("info", "Iniciando Bot da Travessia dos Sonhos...")
     print("Iniciando Bot da Travessia dos Sonhos...")
     print(f"Data e hora: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    
+    # Usar a porta definida pelo Render ou 5000 como fallback
+    port = int(os.environ.get("PORT", 5000))
+    print(f"Iniciando na porta: {port}")
+    
+    # Iniciando o app com a porta correta e debug=False para produção
+    app.run(debug=False, host="0.0.0.0", port=port)
