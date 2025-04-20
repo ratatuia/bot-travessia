@@ -237,7 +237,7 @@ def whatsapp_bot():
     print("====== NOVA REQUISIÇÃO WEBHOOK ======")
     print(f"Headers: {dict(request.headers)}")
     print(f"Form Data: {dict(request.form)}")
-    print(f"JSON Data: {request.get_json()}")
+   # print(f"JSON Data: {request.get_json()}")
     print("======================================") 
         
     # Extrai informações da requisição
