@@ -19,11 +19,9 @@ def esperar_ate_8_da_manha():
     print(f"⏳ Esperando até as 08:00... ({int(segundos_espera)}s)")
     time.sleep(segundos_espera)
 
-if __name__ == "__main__":
-    while True:
+    if __name__ == "__main__":
         esperar_ate_8_da_manha()
-        print("📡 Enviando alertas diários...")
+        print("📢 Enviando alertas diários...")
         consultar_saldo()
         monitorar_twilio()
-        time.sleep(60)  # só pra não travar se rodar em loop por engano
 
