@@ -1,11 +1,12 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append('/opt/render/project/src')  # Caminho absoluto no Render
 
 import time
 import datetime
 from saldo_apis.openai_monitor import consultar_saldo
 from saldo_apis.twilio_monitor import monitorar_twilio
+
 
 def esperar_ate_8_da_manha():
     agora = datetime.datetime.now()
