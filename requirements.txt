@@ -6,3 +6,4 @@ pandas
 twilio
 streamlit
 psutil
+gunicorn
