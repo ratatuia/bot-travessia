@@ -1,6 +1,6 @@
-import sys
 import os
-sys.path.append('/opt/render/project/src')  # Caminho absoluto no Render
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import time
 import datetime
