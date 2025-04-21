@@ -32,5 +32,4 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
         run: |
-          export PYTHONPATH=.
-          python saldo_apis/loop_diario.py
+          python -m saldo_apis.loop_diario
