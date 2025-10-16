@@ -9,6 +9,7 @@ import json
 import traceback
 import os
 import psutil
+import sqlite3
 
 # Variável global para rastrear quando o bot foi iniciado
 app_start_time = datetime.datetime.now()
@@ -915,58 +916,185 @@ def daily_stats():
     try:
         # Data de hoje
         hoje = datetime.datetime.now().strftime("%Y-%m-%d")
-        
+
         # Conecta ao banco de dados
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
+
         # Consulta clientes novos de hoje
         cursor.execute("""
-            SELECT COUNT(*) FROM clientes 
+            SELECT COUNT(*) FROM clientes
             WHERE date(ultima_interacao) = ?
         """, (hoje,))
         novos_clientes = cursor.fetchone()[0]
-        
+
+        # Total de clientes
+        cursor.execute("SELECT COUNT(*) FROM clientes")
+        total_clientes = cursor.fetchone()[0]
+
         # Consulta mensagens de hoje
         cursor.execute("""
-            SELECT COUNT(*) FROM mensagens 
+            SELECT COUNT(*) FROM mensagens
             WHERE date(timestamp) = ?
         """, (hoje,))
         mensagens_hoje = cursor.fetchone()[0]
-        
+
         # Consulta solicitações de atendimento
         cursor.execute("""
-            SELECT COUNT(*) FROM mensagens 
+            SELECT COUNT(*) FROM mensagens
             WHERE date(timestamp) = ? AND precisa_atendimento = 1
         """, (hoje,))
         atendimentos = cursor.fetchone()[0]
-        
+
+        # Clientes em atendimento pendente
+        cursor.execute("""
+            SELECT COUNT(*) FROM clientes
+            WHERE estado = 'atendimento_solicitado'
+        """)
+        atendimentos_pendentes = cursor.fetchone()[0]
+
+        # Taxa de conversão
+        conversion_rate = (atendimentos_pendentes / total_clientes * 100) if total_clientes > 0 else 0
+
         conn.close()
-        
+
         # Formata o relatório
         relatorio = {
             "data": hoje,
             "novos_clientes": novos_clientes,
+            "total_clientes": total_clientes,
             "mensagens_trocadas": mensagens_hoje,
             "solicitacoes_atendimento": atendimentos,
+            "atendimentos_pendentes": atendimentos_pendentes,
+            "conversion_rate": conversion_rate,
             "uptime": str(datetime.datetime.now() - app_start_time)
         }
-        
+
         # Envia para o Telegram se solicitado
         if request.args.get("notify") == "true":
-            mensagem = (
-                f"📊 *Relatório Diário - {hoje}*\n\n"
-                f"• Novos clientes: {novos_clientes}\n"
-                f"• Mensagens trocadas: {mensagens_hoje}\n"
-                f"• Solicitações de atendimento: {atendimentos}\n\n"
-                f"🚢 *Travessia dos Sonhos* - Bot de Atendimento"
-            )
-            
-            telegram_service.enviar_mensagem_urgente(mensagem, None, None)
-        
+            stats = {
+                "clients_24h": novos_clientes,
+                "total_clients": total_clientes,
+                "messages_24h": mensagens_hoje,
+                "conversion_rate": conversion_rate,
+                "atendimentos_pendentes": atendimentos_pendentes
+            }
+            telegram_service.enviar_relatorio_diario(stats)
+
         return jsonify(relatorio), 200
     except Exception as e:
         capturar_erro("daily_stats", e)
+        return jsonify({"error": str(e)}), 500
+
+# Rota para verificar inatividade
+@app.route("/check-inactivity", methods=["GET"])
+def check_inactivity():
+    """Verifica se não há mensagens há X horas e envia alerta"""
+    try:
+        horas = int(request.args.get("hours", 12))
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Verifica última mensagem
+        cursor.execute("""
+            SELECT MAX(timestamp) FROM mensagens
+        """)
+        ultima_mensagem = cursor.fetchone()[0]
+        conn.close()
+
+        if not ultima_mensagem:
+            # Nunca recebeu mensagens
+            telegram_service.enviar_alerta_inatividade(horas)
+            return jsonify({
+                "inativo": True,
+                "mensagem": "Nenhuma mensagem registrada",
+                "alerta_enviado": True
+            }), 200
+
+        # Calcula tempo desde última mensagem
+        ultima = datetime.datetime.fromisoformat(ultima_mensagem)
+        agora = datetime.datetime.now()
+        tempo_inativo = (agora - ultima).total_seconds() / 3600
+
+        if tempo_inativo >= horas:
+            # Envia alerta
+            telegram_service.enviar_alerta_inatividade(int(tempo_inativo))
+            return jsonify({
+                "inativo": True,
+                "horas_inativo": round(tempo_inativo, 1),
+                "ultima_mensagem": ultima_mensagem,
+                "alerta_enviado": True
+            }), 200
+        else:
+            return jsonify({
+                "inativo": False,
+                "horas_inativo": round(tempo_inativo, 1),
+                "ultima_mensagem": ultima_mensagem,
+                "alerta_enviado": False
+            }), 200
+
+    except Exception as e:
+        capturar_erro("check_inactivity", e)
+        return jsonify({"error": str(e)}), 500
+
+# Rota para verificar performance
+@app.route("/check-performance", methods=["GET"])
+def check_performance():
+    """Verifica métricas de performance e envia alertas se necessário"""
+    try:
+        from observability import metrics
+
+        timings = metrics.get('timings', {})
+        alertas_enviados = []
+
+        for operacao, data in timings.items():
+            avg_ms = data.get('avg_ms', 0)
+            if avg_ms > 2000:  # >2 segundos
+                telegram_service.enviar_alerta_performance(operacao, avg_ms)
+                alertas_enviados.append({
+                    "operacao": operacao,
+                    "tempo_ms": avg_ms
+                })
+
+        return jsonify({
+            "alertas_enviados": len(alertas_enviados),
+            "detalhes": alertas_enviados
+        }), 200
+
+    except Exception as e:
+        capturar_erro("check_performance", e)
+        return jsonify({"error": str(e)}), 500
+
+# Rota para verificar health
+@app.route("/check-health-components", methods=["GET"])
+def check_health_components():
+    """Verifica saúde dos componentes e envia alertas se necessário"""
+    try:
+        health = {
+            'database': os.path.exists(DB_PATH),
+            'logs': os.path.exists('logs/bot.log'),
+            'metrics': os.path.exists('logs/metrics.json')
+        }
+
+        componentes_com_problema = [k for k, v in health.items() if not v]
+
+        if componentes_com_problema:
+            telegram_service.enviar_alerta_health(componentes_com_problema)
+            return jsonify({
+                "status": "degraded",
+                "componentes_com_problema": componentes_com_problema,
+                "alerta_enviado": True
+            }), 200
+        else:
+            return jsonify({
+                "status": "healthy",
+                "componentes_com_problema": [],
+                "alerta_enviado": False
+            }), 200
+
+    except Exception as e:
+        capturar_erro("check_health_components", e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

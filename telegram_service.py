@@ -125,11 +125,11 @@ class TelegramService:
             print(f"[ERRO TELEGRAM] {e}")
             return False
     
-    def enviar_mensagem_urgente(self, mensagem, nome_cliente=None, numero=None):
-        """Envia uma mensagem urgente diretamente para o Telegram"""
+    def enviar_mensagem_urgente(self, mensagem, nome_cliente=None, numero=None, botoes=None):
+        """Envia uma mensagem urgente diretamente para o Telegram com botões opcionais"""
         try:
             link_whatsapp = formatar_numero_whatsapp(numero) if numero else None
-            
+
             texto = mensagem
             if nome_cliente or numero:
                 info_adicional = []
@@ -137,9 +137,9 @@ class TelegramService:
                     info_adicional.append(f"👤 *Nome*: {nome_cliente}")
                 if numero:
                     info_adicional.append(f"📱 *Contato*: [{link_whatsapp}](https://{link_whatsapp})")
-                
+
                 texto += "\n\n" + "\n".join(info_adicional)
-            
+
             url = f"https://api.telegram.org/bot{self.token}/sendMessage"
             params = {
                 "chat_id": self.chat_id,
@@ -147,9 +147,108 @@ class TelegramService:
                 "parse_mode": "Markdown",
                 "disable_web_page_preview": False
             }
-            
-            resposta = requests.get(url, params=params, timeout=5)
+
+            # Adiciona botões inline se fornecidos
+            if botoes:
+                params["reply_markup"] = {
+                    "inline_keyboard": [botoes]
+                }
+
+            resposta = requests.post(url, json=params, timeout=5)
             return resposta.status_code == 200
         except Exception as e:
             print(f"[ERRO TELEGRAM URGENTE] {e}")
+            return False
+
+    def enviar_relatorio_diario(self, stats):
+        """Envia relatório diário com estatísticas"""
+        try:
+            hoje = datetime.datetime.now().strftime('%d/%m/%Y')
+
+            mensagem = f"""📊 *Relatório Diário - {hoje}*
+
+👥 *Novos clientes*: {stats.get('clients_24h', 0)}
+👨‍👩‍👧‍👦 *Total de clientes*: {stats.get('total_clients', 0)}
+💬 *Mensagens*: {stats.get('messages_24h', 0)}
+🎯 *Taxa de conversão*: {stats.get('conversion_rate', 0):.1f}%
+⚠️ *Atendimentos pendentes*: {stats.get('atendimentos_pendentes', 0)}
+
+🚢 *Travessia dos Sonhos*
+"""
+
+            botoes = [
+                {"text": "📊 Ver Dashboard", "url": "https://bot-travessia.onrender.com/dashboard"}
+            ]
+
+            return self.enviar_mensagem_urgente(mensagem, botoes=botoes)
+        except Exception as e:
+            print(f"[ERRO RELATÓRIO DIÁRIO] {e}")
+            return False
+
+    def enviar_alerta_inatividade(self, horas_inativo):
+        """Envia alerta quando não há mensagens há X horas"""
+        try:
+            mensagem = f"""⚠️ *Alerta de Inatividade*
+
+🕐 Nenhuma mensagem recebida nas últimas *{horas_inativo} horas*
+
+Possíveis causas:
+• Webhook do Twilio não está funcionando
+• Bot está offline
+• Nenhum cliente entrou em contato
+
+🔍 Verifique o sistema"""
+
+            botoes = [
+                {"text": "🔧 Testar Webhook", "url": "https://bot-travessia.onrender.com/health"},
+                {"text": "📊 Ver Dashboard", "url": "https://bot-travessia.onrender.com/dashboard"}
+            ]
+
+            return self.enviar_mensagem_urgente(mensagem, botoes=botoes)
+        except Exception as e:
+            print(f"[ERRO ALERTA INATIVIDADE] {e}")
+            return False
+
+    def enviar_alerta_performance(self, operacao, tempo_ms):
+        """Envia alerta quando operação está lenta"""
+        try:
+            mensagem = f"""⚠️ *Alerta de Performance*
+
+🐌 Operação lenta detectada:
+*{operacao}*
+
+⏱️ Tempo médio: *{tempo_ms:.0f}ms*
+⚡ Esperado: <2000ms
+
+📊 Verifique o dashboard para mais detalhes"""
+
+            botoes = [
+                {"text": "📊 Ver Dashboard", "url": "https://bot-travessia.onrender.com/dashboard"}
+            ]
+
+            return self.enviar_mensagem_urgente(mensagem, botoes=botoes)
+        except Exception as e:
+            print(f"[ERRO ALERTA PERFORMANCE] {e}")
+            return False
+
+    def enviar_alerta_health(self, componentes_com_problema):
+        """Envia alerta quando componentes estão com problema"""
+        try:
+            componentes_texto = "\n".join([f"❌ {c}" for c in componentes_com_problema])
+
+            mensagem = f"""🔴 *Alerta de Health Check*
+
+Componentes com problema:
+{componentes_texto}
+
+🔧 Ação necessária!"""
+
+            botoes = [
+                {"text": "🏥 Ver Health", "url": "https://bot-travessia.onrender.com/api/health/detailed"},
+                {"text": "📊 Ver Dashboard", "url": "https://bot-travessia.onrender.com/dashboard"}
+            ]
+
+            return self.enviar_mensagem_urgente(mensagem, botoes=botoes)
+        except Exception as e:
+            print(f"[ERRO ALERTA HEALTH] {e}")
             return False
