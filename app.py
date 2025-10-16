@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from twilio.twiml.messaging_response import MessagingResponse
 import random
 import re
@@ -18,12 +20,37 @@ from telegram_service import TelegramService
 from openai_service import AIService
 from log_service import registrar_log, capturar_erro
 
+# Importações de segurança
+from security import (
+    require_api_key,
+    require_twilio_signature,
+    sanitize_text,
+    validate_email as security_validate_email,
+    validate_name,
+    validate_phone_number,
+    validate_menu_option as security_validate_menu,
+    add_security_headers,
+    mask_sensitive_data
+)
 
 # Inicialização
 app = Flask(__name__)
 init_db()  # Inicializa o banco de dados
 telegram_service = TelegramService()
 ai_service = AIService()
+
+# Configuração de Rate Limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# Adiciona headers de segurança a todas as respostas
+@app.after_request
+def after_request_func(response):
+    return add_security_headers(response)
 
 # ADICIONE A ROTA RAIZ AQUI
 @app.route("/", methods=["GET"])
@@ -125,30 +152,80 @@ def is_greeting(message):
     
     return False
 
-# Rota para reset do banco de dados
-@app.route("/reset-db", methods=["GET"])
+# Rota para reset do banco de dados (PROTEGIDA)
+@app.route("/reset-db", methods=["POST"])
+@require_api_key
+@limiter.limit("5 per day")
 def reset_database():
+    """
+    ENDPOINT PROTEGIDO: Requer API Key no header Authorization
+    Uso: curl -X POST -H "Authorization: Bearer YOUR_API_KEY" https://seu-app.onrender.com/reset-db
+    """
     try:
-        import os
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
-        init_db()
-        return "Banco de dados reiniciado com sucesso!", 200
-    except Exception as e:
-        return f"Erro ao reiniciar banco de dados: {e}", 500
+        registrar_log("warning", "Solicitação de reset do banco de dados recebida")
 
-# Rota de diagnóstico
+        if os.path.exists(DB_PATH):
+            # Backup antes de deletar
+            backup_path = f"{DB_PATH}.backup.{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            import shutil
+            shutil.copy2(DB_PATH, backup_path)
+            registrar_log("info", f"Backup criado em: {backup_path}")
+
+            os.remove(DB_PATH)
+
+        init_db()
+        registrar_log("info", "Banco de dados reiniciado com sucesso")
+
+        return jsonify({
+            "success": True,
+            "message": "Banco de dados reiniciado com sucesso",
+            "backup": backup_path if os.path.exists(DB_PATH) else None
+        }), 200
+    except Exception as e:
+        capturar_erro("reset_database", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+# Rota de diagnóstico (PROTEGIDA)
 @app.route("/debug-state", methods=["GET"])
+@require_api_key
+@limiter.limit("30 per hour")
 def debug_state():
+    """
+    ENDPOINT PROTEGIDO: Requer API Key no header Authorization
+    Uso: curl -H "Authorization: Bearer YOUR_API_KEY" "https://seu-app.onrender.com/debug-state?phone=whatsapp:+5511999999999"
+    """
     try:
         phone = request.args.get("phone")
         if not phone:
-            return "Parâmetro 'phone' é obrigatório", 400
-        
+            return jsonify({
+                "error": "Parâmetro 'phone' é obrigatório"
+            }), 400
+
+        # Valida formato do telefone
+        if not validate_phone_number(phone):
+            return jsonify({
+                "error": "Formato de telefone inválido. Use: whatsapp:+5511999999999"
+            }), 400
+
         state = get_client_state(phone)
-        return f"Estado do cliente {phone}: {state}", 200
+
+        # Mascara dados sensíveis antes de retornar
+        if state and isinstance(state, dict):
+            if 'email' in state:
+                state['email'] = mask_sensitive_data(state['email'])
+
+        return jsonify({
+            "phone": phone,
+            "state": state
+        }), 200
     except Exception as e:
-        return f"Erro ao obter estado: {e}", 500
+        capturar_erro("debug_state", e)
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 # NOVA ROTA DE HEALTH CHECK MELHORADA
 @app.route("/health", methods=["GET"])
@@ -230,19 +307,28 @@ def health_check():
         registrar_log("error", f"Erro ao executar health check: {e}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-# Rota principal do bot
+# Rota principal do bot (PROTEGIDA COM VALIDAÇÃO TWILIO)
 @app.route("/zap", methods=["POST"])
+@limiter.limit("100 per hour")  # Rate limit por IP
+@require_twilio_signature  # Valida assinatura Twilio
 def whatsapp_bot():
-    # Adicione estes logs no início da função
+    # Logs de debug (mascarando dados sensíveis)
     print("====== NOVA REQUISIÇÃO WEBHOOK ======")
-    print(f"Headers: {dict(request.headers)}")
-    print(f"Form Data: {dict(request.form)}")
-   # print(f"JSON Data: {request.get_json()}")
-    print("======================================") 
-        
+    registrar_log("info", f"Nova requisição webhook de {request.headers.get('X-Forwarded-For', request.remote_addr)}")
+
     # Extrai informações da requisição
     incoming_msg = request.form.get("Body", "").strip()
     sender = request.form.get("From", "")
+
+    # Sanitiza entrada do usuário
+    incoming_msg = sanitize_text(incoming_msg, max_length=500)
+
+    # Valida formato do telefone
+    if not validate_phone_number(sender):
+        registrar_log("warning", f"Número de telefone inválido: {mask_sensitive_data(sender)}")
+        resp = MessagingResponse()
+        resp.message("Desculpe, ocorreu um erro com seu número de telefone.")
+        return str(resp)
     
     print(f"[CLIENTE] {sender} disse: {incoming_msg}")
     registrar_log("info", f"Mensagem recebida de {sender}: {incoming_msg}")
@@ -412,29 +498,45 @@ def processar_mensagem(sender, mensagem, estado_atual):
     # Processamento baseado no estado
     if estado == "aguardando_nome":
         print("[DEBUG] Processando aguardando_nome")
-        # Captura o nome
-        novo_estado = {"nome": mensagem, "estado": "aguardando_email"}
+
+        # Sanitiza e valida o nome
+        nome_sanitizado = sanitize_text(mensagem, max_length=100)
+
+        if not validate_name(nome_sanitizado):
+            print("[DEBUG] Nome inválido")
+            resposta = (
+                "Por favor, informe um nome válido contendo apenas letras e espaços. "
+                "Evite números ou caracteres especiais."
+            )
+            return resposta, estado_atual, {}
+
+        # Captura o nome válido
+        novo_estado = {"nome": nome_sanitizado, "estado": "aguardando_email"}
         resposta = MENSAGENS["pedir_email"]
         return resposta, novo_estado, {}
         
     elif estado == "aguardando_email":
         print("[DEBUG] Processando aguardando_email")
-        # Valida e captura o email
-        if not validar_email(mensagem):
+
+        # Sanitiza email
+        email_sanitizado = sanitize_text(mensagem, max_length=254).lower()
+
+        # Valida email com função de segurança aprimorada
+        if not security_validate_email(email_sanitizado):
             print("[DEBUG] Email inválido")
             resposta = MENSAGENS["email_invalido"].format(nome=nome)
             return resposta, estado_atual, {}
-        
+
         print("[DEBUG] Email válido")
         novo_estado = {
             "nome": nome,
-            "email": mensagem,
+            "email": email_sanitizado,
             "estado": "menu"
         }
-        
+
         resposta = formatar_menu("principal", nome)
-        telegram_service.atualizar_perfil(sender, "Email", mensagem)
-        
+        telegram_service.atualizar_perfil(sender, "Email", email_sanitizado)
+
         return resposta, novo_estado, {}
         
     elif estado == "menu":
