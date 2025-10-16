@@ -10,3 +10,4 @@ psutil
 gunicorn
 plotly
 bleach
+psycopg2-binary
