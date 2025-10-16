@@ -1045,7 +1045,9 @@ def check_performance():
     try:
         from observability import metrics
 
-        timings = metrics.get('timings', {})
+        # Obter resumo das métricas
+        metrics_summary = metrics.get_summary()
+        timings = metrics_summary.get('timings', {})
         alertas_enviados = []
 
         for operacao, data in timings.items():
