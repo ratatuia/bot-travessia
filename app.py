@@ -39,6 +39,10 @@ init_db()  # Inicializa o banco de dados
 telegram_service = TelegramService()
 ai_service = AIService()
 
+# Registrar Blueprint do Dashboard
+from dashboard_routes import dashboard_bp
+app.register_blueprint(dashboard_bp)
+
 # Configuração de Rate Limiting
 limiter = Limiter(
     app=app,

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Dashboard - Bot Travessia</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 50px;
+            font-weight: bold;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-change {
+            font-size: 0.85rem;
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .metric-change.positive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .metric-change.neutral {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .health-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .health-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .health-item.healthy {
+            border-left: 4px solid #28a745;
+        }
+
+        .health-item.warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        .health-item.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .health-item h4 {
+            margin-bottom: 10px;
+        }
+
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .metrics-grid, .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🔍 Dashboard Bot Travessia</h1>
+                <p style="color: #666; margin-top: 5px;">Observabilidade em Tempo Real</p>
+            </div>
+            <div>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Online</span>
+                </div>
+                <button class="refresh-btn" onclick="refreshDashboard()" style="margin-left: 10px;">
+                    🔄 Atualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="metrics-grid" id="kpis">
+            <div class="metric-card">
+                <div class="metric-icon">⏱️</div>
+                <div class="metric-value" id="uptime">--</div>
+                <div class="metric-label">Uptime</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">👥</div>
+                <div class="metric-value" id="total-clients">--</div>
+                <div class="metric-label">Total Clientes</div>
+                <div class="metric-change positive" id="clients-change">--</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">💬</div>
+                <div class="metric-value" id="messages-24h">--</div>
+                <div class="metric-label">Mensagens (24h)</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">🎯</div>
+                <div class="metric-value" id="conversion-rate">--%</div>
+                <div class="metric-label">Taxa de Conversão</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>📊 Atividade por Hora</h3>
+                <canvas id="activityChart"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3>🔄 Funil de Conversão</h3>
+                <canvas id="funnelChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>⚡ Performance (Top 5)</h3>
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3>📈 Clientes por Estado</h3>
+                <canvas id="statesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Health Status -->
+        <div class="chart-card">
+            <h3>💚 Status dos Componentes</h3>
+            <div class="health-status" id="health-status">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div class="last-update">
+            Última atualização: <span id="last-update-time">--</span> |
+            Auto-refresh: <span id="countdown">30</span>s
+        </div>
+    </div>
+
+    <script>
+        let activityChart, funnelChart, performanceChart, statesChart;
+        let countdownInterval;
+        let countdown = 30;
+
+        // Initialize charts
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            };
+
+            // Activity Chart
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            activityChart = new Chart(activityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Mensagens',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // Funnel Chart
+            const funnelCtx = document.getElementById('funnelChart').getContext('2d');
+            funnelChart = new Chart(funnelCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Clientes',
+                        data: [],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#4facfe',
+                            '#00f2fe'
+                        ]
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    indexAxis: 'y'
+                }
+            });
+
+            // Performance Chart
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(performanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Tempo médio (ms)',
+                        data: [],
+                        backgroundColor: '#ffc107'
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // States Chart
+            const statesCtx = document.getElementById('statesChart').getContext('2d');
+            statesChart = new Chart(statesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#4facfe',
+                            '#00f2fe',
+                            '#43e97b',
+                            '#fa709a'
+                        ]
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+
+        // Fetch data from API
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard/data');
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        }
+
+        // Update dashboard with new data
+        function updateDashboard(data) {
+            // Update KPIs
+            const uptimeHours = (data.metrics.uptime_seconds / 3600).toFixed(1);
+            document.getElementById('uptime').textContent = `${uptimeHours}h`;
+
+            document.getElementById('total-clients').textContent = data.db_stats.total_clients || 0;
+            document.getElementById('clients-change').textContent = `+${data.db_stats.clients_24h || 0} hoje`;
+
+            document.getElementById('messages-24h').textContent = data.db_stats.messages_24h || 0;
+
+            const conversionRate = data.db_stats.conversion_rate || 0;
+            document.getElementById('conversion-rate').textContent = `${conversionRate.toFixed(1)}%`;
+
+            // Update Activity Chart
+            const activityData = data.db_stats.activity_by_hour || {};
+            const hours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+            const counts = hours.map((h) => activityData[h.substring(0, 2)] || 0);
+
+            activityChart.data.labels = hours;
+            activityChart.data.datasets[0].data = counts;
+            activityChart.update();
+
+            // Update Funnel Chart
+            const stateOrder = ['Aguardando Nome', 'Aguardando Email', 'Menu', 'Interesses', 'Atendimento'];
+            const stateCounts = [
+                data.db_stats.clients_by_state?.aguardando_nome || 0,
+                data.db_stats.clients_by_state?.aguardando_email || 0,
+                data.db_stats.clients_by_state?.menu || 0,
+                data.db_stats.clients_by_state?.perguntando_interesses || 0,
+                data.db_stats.clients_by_state?.atendimento_solicitado || 0
+            ];
+
+            funnelChart.data.labels = stateOrder;
+            funnelChart.data.datasets[0].data = stateCounts;
+            funnelChart.update();
+
+            // Update Performance Chart
+            const timings = data.metrics.timings || {};
+            const topTimings = Object.entries(timings)
+                .sort((a, b) => b[1].avg_ms - a[1].avg_ms)
+                .slice(0, 5);
+
+            performanceChart.data.labels = topTimings.map(([key]) =>
+                key.replace('operation.', '').replace('function.', '')
+            );
+            performanceChart.data.datasets[0].data = topTimings.map(([, val]) => val.avg_ms);
+            performanceChart.update();
+
+            // Update States Chart
+            const clientsByState = data.db_stats.clients_by_state || {};
+            statesChart.data.labels = Object.keys(clientsByState).map(s =>
+                s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+            );
+            statesChart.data.datasets[0].data = Object.values(clientsByState);
+            statesChart.update();
+
+            // Update Health Status
+            updateHealthStatus(data.health || {});
+
+            // Update timestamp
+            document.getElementById('last-update-time').textContent = new Date().toLocaleTimeString('pt-BR');
+        }
+
+        // Update health status
+        function updateHealthStatus(health) {
+            const healthContainer = document.getElementById('health-status');
+            healthContainer.innerHTML = '';
+
+            const components = [
+                { name: 'Database', key: 'database', icon: '🗄️' },
+                { name: 'Logs', key: 'logs', icon: '📝' },
+                { name: 'Métricas', key: 'metrics', icon: '📊' }
+            ];
+
+            components.forEach(comp => {
+                const status = health[comp.key] ? 'healthy' : 'error';
+                const statusText = health[comp.key] ? 'Online' : 'Offline';
+
+                const div = document.createElement('div');
+                div.className = `health-item ${status}`;
+                div.innerHTML = `
+                    <h4>${comp.icon} ${comp.name}</h4>
+                    <p style="color: ${health[comp.key] ? '#28a745' : '#dc3545'}">
+                        ${statusText}
+                    </p>
+                `;
+                healthContainer.appendChild(div);
+            });
+        }
+
+        // Refresh dashboard
+        function refreshDashboard() {
+            fetchDashboardData();
+            resetCountdown();
+        }
+
+        // Countdown timer
+        function resetCountdown() {
+            countdown = 30;
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            countdownInterval = setInterval(() => {
+                countdown--;
+                document.getElementById('countdown').textContent = countdown;
+
+                if (countdown <= 0) {
+                    refreshDashboard();
+                }
+            }, 1000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            fetchDashboardData();
+            resetCountdown();
+        });
+    </script>
+</body>
+</html>
