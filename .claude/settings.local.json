@@ -6,7 +6,9 @@
       "Bash(git remote add:*)",
       "Bash(python:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(curl -X POST https://bot-travessia.onrender.com/zap -d \"Body=teste\" -d \"From=whatsapp:+5511999999999\" -v)"
     ],
     "deny": [],
     "ask": []
