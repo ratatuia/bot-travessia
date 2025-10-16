@@ -629,54 +629,43 @@ def processar_mensagem(sender, mensagem, estado_atual):
             resposta = f"{nome}, {obter_resposta_invalida()}\n\n{formatar_menu('principal', nome)}"
             return resposta, estado_atual, {}
     
-    # Estado após conhecer tripulação
+    # Estado após conhecer tripulação - NOVO FLUXO
     elif estado == "pos_conhecer_tripulacao":
         print(f"[DEBUG] Processando pos_conhecer_tripulacao, mensagem: '{mensagem}'")
-        # Simplificado para diagnóstico - sempre passa para o próximo passo
-        try:
-            # Valida opção
-            opcao, valida = validar_opcao_menu(mensagem, 2)
-            print(f"[DEBUG] Validação: opcao={opcao}, valida={valida}")
-            
-            if not valida:
-                print("[DEBUG] Opção inválida")
-                resposta = f"{nome}, {obter_resposta_invalida()}\n\nVocê já teve alguma experiência anterior com cruzeiros marítimos?\n\n1️⃣ Sim\n2️⃣ Não, será minha primeira vez"
-                return resposta, estado_atual, {}
-            
-            # Registra a experiência prévia
-            experiencia = "Sim" if opcao == 1 else "Não"
-            print(f"[DEBUG] Experiência: {experiencia}")
-            
-            # Configurando próximo estado
-            print("[DEBUG] Configurando próximo estado para perguntando_interesses")
-            novo_estado = {
-                **estado_atual, 
-                "estado": "perguntando_interesses",
-                "experiencia_previa": experiencia
-            }
-            
-            # Atualiza Telegram
-            telegram_service.atualizar_perfil(sender, "Experiência prévia", experiencia)
-            
-            # Resposta (menu de interesses)
-            resposta = formatar_menu("interesses", nome)
-            
-            print("[DEBUG] Retornando resposta do menu de interesses")
-            return resposta, novo_estado, {}
-        except Exception as e:
-            print(f"[ERRO] Erro ao processar pos_conhecer_tripulacao: {e}")
-            print(traceback.format_exc())
-            capturar_erro("pos_conhecer_tripulacao", e)
-            
-            # Solução de contorno - força ir para o próximo estado
-            novo_estado = {
-                **estado_atual, 
-                "estado": "perguntando_interesses",
-                "experiencia_previa": "Não especificada"
-            }
-            
-            resposta = formatar_menu("interesses", nome)
-            return resposta, novo_estado, {}
+        # Valida opção (1 ou 2: veterano ou primeira vez)
+        opcao, valida = validar_opcao_menu(mensagem, 2)
+
+        if not valida:
+            print("[DEBUG] Opção inválida")
+            resposta = f"{nome}, {obter_resposta_invalida()}\n\nVocê já fez algum cruzeiro antes?\n\n1️⃣ Sim, sou veterano! 🎖️\n2️⃣ Não, será minha primeira vez 🎉"
+            return resposta, estado_atual, {}
+
+        # Registra a experiência prévia
+        experiencia = "Veterano" if opcao == 1 else "Primeira vez"
+        print(f"[DEBUG] Experiência: {experiencia}")
+
+        # Atualiza Telegram
+        telegram_service.atualizar_perfil(sender, "Experiência prévia", experiencia)
+
+        # Vai direto para qualificação inicial
+        novo_estado = {
+            **estado_atual,
+            "estado": "qualificacao_inicial",
+            "experiencia_previa": experiencia
+        }
+
+        # Resposta depende se é veterano ou primeira vez
+        if opcao == 1:
+            resposta_inicial = MENSAGENS.get("resposta_veterano", "Ótimo! Então você já sabe o que é bom!").format(nome=nome)
+        else:
+            resposta_inicial = MENSAGENS.get("resposta_primeira_vez", "Que emoção! Sua primeira vez será inesquecível!").format(nome=nome)
+
+        # Adiciona a pergunta de qualificação
+        qualif = MENSAGENS["qualificacao_inicial"]
+        resposta = f"{resposta_inicial}\n\n{qualif['titulo']}\n\n{qualif['pergunta']}"
+
+        print("[DEBUG] Indo para qualificacao_inicial")
+        return resposta, novo_estado, {}
     
     # NOVO: Estado de qualificação inicial (combina pessoas + orçamento + quando)
     elif estado == "qualificacao_inicial":
@@ -830,188 +819,6 @@ Responda APENAS JSON:
             resposta = f"✅ Anotado! {formatar_menu('forma_contato')}"
             return resposta, novo_estado, {}
 
-    # Estado de perguntando interesses
-    elif estado == "perguntando_interesses":
-        print("[DEBUG] Processando perguntando_interesses")
-        # Valida opção
-        opcao, valida = validar_opcao_menu(mensagem, 6)
-        
-        if not valida:
-            print("[DEBUG] Opção inválida para interesses")
-            resposta = f"{nome}, {obter_resposta_invalida()}\n\n{formatar_menu('interesses')}"
-            return resposta, estado_atual, {}
-        
-        # Mapeamento dos interesses
-        opcoes_interesses = {
-            1: "Gastronomia",
-            2: "Entretenimento",
-            3: "Destinos exóticos",
-            4: "Relaxamento",
-            5: "Atividades para família",
-            6: "Experiência completa"
-        }
-        
-        # Registra o interesse principal
-        interesse = opcoes_interesses.get(opcao)
-        novo_estado = {
-            **estado_atual,
-            "estado": "apos_interesses",
-            "interesse_principal": interesse
-        }
-        
-        # Atualiza Telegram
-        telegram_service.atualizar_perfil(sender, "Interesse principal", interesse)
-        
-        # Resposta - pergunta se quer planejar viagem
-        resposta = (
-            f"✨ Excelente escolha, {nome}! Entendi que você se interessa por {interesse}.\n\n"
-            f"Gostaria de planejar sua viagem personalizada agora?\n\n"
-            f"1️⃣ Sim, vamos começar!\n"
-            f"2️⃣ Não, apenas pesquisando por enquanto"
-        )
-        
-        return resposta, novo_estado, {}
-    
-    # Estado após coletar interesse
-    elif estado == "apos_interesses":
-        print("[DEBUG] Processando apos_interesses")
-        # Valida opção
-        opcao, valida = validar_opcao_menu(mensagem, 2)
-        
-        if not valida:
-            print("[DEBUG] Opção inválida após interesses")
-            resposta = (
-                f"{nome}, {obter_resposta_invalida()}\n\n"
-                f"Gostaria de planejar sua viagem personalizada agora?\n\n"
-                f"1️⃣ Sim, vamos começar!\n"
-                f"2️⃣ Não, apenas pesquisando por enquanto"
-            )
-            return resposta, estado_atual, {}
-        
-        if opcao == 1:  # Sim, quer planejar
-            print("[DEBUG] Cliente quer planejar viagem")
-            # Direciona para o fluxo de planejamento
-            novo_estado = {**estado_atual, "estado": "perguntando_periodo_viagem"}
-            resposta = formatar_menu("periodo_viagem", nome)
-            return resposta, novo_estado, {}
-        else:  # Não, apenas pesquisando
-            print("[DEBUG] Cliente apenas pesquisando")
-            # Retorna ao menu
-            novo_estado = {**estado_atual, "estado": "menu"}
-            resposta = MENSAGENS["resposta_pesquisa"].format(nome=nome)
-            return resposta, novo_estado, {}
-    
-    # Estado de perguntando período de viagem
-    elif estado == "perguntando_periodo_viagem":
-        print("[DEBUG] Processando perguntando_periodo_viagem")
-        # Valida opção
-        opcao, valida = validar_opcao_menu(mensagem, 6)
-        
-        if not valida:
-            print("[DEBUG] Opção inválida para período")
-            resposta = f"{nome}, {obter_resposta_invalida()}\n\n{formatar_menu('periodo_viagem')}"
-            return resposta, estado_atual, {}
-        
-        # Mapeamento dos períodos
-        opcoes_periodo = {
-            1: "Primeiros meses (Jan-Mar)",
-            2: "Meio do ano (Abr-Jun)",
-            3: "Férias de julho",
-            4: "Segundo semestre (Ago-Out)",
-            5: "Final do ano (Nov-Dez)",
-            6: "Ainda não decidido"
-        }
-        
-        # Registra o período desejado
-        periodo = opcoes_periodo.get(opcao)
-        novo_estado = {
-            **estado_atual,
-            "estado": "perguntando_duracao",
-            "periodo_viagem": periodo
-        }
-        
-        # Atualiza Telegram
-        telegram_service.atualizar_perfil(sender, "Período desejado", periodo)
-        
-        # Resposta (menu de duração)
-        resposta = f"📅 Excelente, {nome}! {formatar_menu('duracao')}"
-        
-        return resposta, novo_estado, {}
-    
-    # Estado de perguntando duração
-    elif estado == "perguntando_duracao":
-        print("[DEBUG] Processando perguntando_duracao")
-        # Valida opção
-        opcao, valida = validar_opcao_menu(mensagem, 5)
-        
-        if not valida:
-            print("[DEBUG] Opção inválida para duração")
-            resposta = f"{nome}, {obter_resposta_invalida()}\n\n{formatar_menu('duracao')}"
-            return resposta, estado_atual, {}
-        
-        # Mapeamento das durações
-        opcoes_duracao = {
-            1: "Mini-cruzeiro (3-5 dias)",
-            2: "Cruzeiro padrão (6-9 dias)",
-            3: "Cruzeiro estendido (10-14 dias)",
-            4: "Longa duração (15+ dias)",
-            5: "Ainda não decidido"
-        }
-        
-        # Registra a duração desejada
-        duracao = opcoes_duracao.get(opcao)
-        novo_estado = {
-            **estado_atual,
-            "estado": "perguntando_destino",
-            "duracao": duracao
-        }
-        
-        # Atualiza Telegram
-        telegram_service.atualizar_perfil(sender, "Duração desejada", duracao)
-        
-        # Resposta (menu de destino)
-        resposta = f"⏱️ Perfeito, {nome}! {formatar_menu('destino_regiao')}"
-        
-        return resposta, novo_estado, {}
-    
-    # Estado de perguntando destino
-    elif estado == "perguntando_destino":
-        print("[DEBUG] Processando perguntando_destino")
-        # Valida opção
-        opcao, valida = validar_opcao_menu(mensagem, 8)  # Agora são 8 opções
-        
-        if not valida:
-            print("[DEBUG] Opção inválida para destino")
-            resposta = f"{nome}, {obter_resposta_invalida()}\n\n{formatar_menu('destino_regiao')}"
-            return resposta, estado_atual, {}
-        
-        # Mapeamento dos destinos
-        opcoes_destino = {
-            1: "Brasil",
-            2: "Caribe e Bahamas",
-            3: "Mediterrâneo",
-            4: "Europa e Escandinávia",
-            5: "América do Sul",
-            6: "Alasca",
-            7: "Ásia e Oceania",
-            8: "Outro destino / Não decidido"
-        }
-        
-        # Registra o destino desejado
-        destino = opcoes_destino.get(opcao)
-        novo_estado = {
-            **estado_atual,
-            "estado": "perguntando_forma_contato",
-            "destino": destino
-        }
-        
-        # Atualiza Telegram
-        telegram_service.atualizar_perfil(sender, "Destino desejado", destino)
-        
-        # Resposta (forma de contato)
-        resposta = f"🌎 Excelente escolha, {nome}! {formatar_menu('forma_contato')}"
-        
-        return resposta, novo_estado, {}
     
 # Estado de perguntando forma de contato
     elif estado == "perguntando_forma_contato":
