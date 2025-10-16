@@ -451,7 +451,7 @@ def whatsapp_bot():
 def processar_mensagem(sender, mensagem, estado_atual):
     """
     Processa a mensagem do usuário com base no estado atual
-
+    
     Returns:
         - resposta (str): Texto de resposta para o cliente
         - novo_estado (dict): Novo estado do cliente
@@ -459,76 +459,18 @@ def processar_mensagem(sender, mensagem, estado_atual):
     """
     print(f"[DEBUG] Processando mensagem: '{mensagem}'")
     print(f"[DEBUG] Estado atual: {estado_atual}")
-
+    
     # Se não tem estado, retorna mensagem de boas-vindas
     if not estado_atual:
         print("[DEBUG] Sem estado atual, iniciando nova conversa")
         return MENSAGENS["boas_vindas"], {"estado": "aguardando_nome"}, {}
-
+    
     # Determina o estado e nome
     estado = estado_atual.get("estado") if isinstance(estado_atual, dict) else estado_atual
     nome = estado_atual.get("nome") if isinstance(estado_atual, dict) else None
-
+    
     print(f"[DEBUG] Estado: {estado}, Nome: {nome}")
-
-    # NOVO: Detecta comandos especiais a qualquer momento
-    from config import COMANDOS_ESPECIAIS, detectar_comando
-    comando_detectado = detectar_comando(mensagem)
-
-    if comando_detectado == "menu" and nome:
-        print("[DEBUG] Comando 'menu' detectado")
-        novo_estado = {**estado_atual, "estado": "menu"}
-        resposta = formatar_menu("principal", nome)
-        return resposta, novo_estado, {}
-
-    elif comando_detectado == "resumo" and nome:
-        print("[DEBUG] Comando 'resumo' detectado")
-        # Gera resumo do que foi coletado até agora
-        resumo_texto = "📋 *Resumo da sua viagem até agora:*\n\n"
-
-        mapeamento = {
-            "experiencia_previa": "Experiência prévia",
-            "interesse_principal": "Interesse",
-            "periodo_viagem": "Período",
-            "duracao": "Duração",
-            "destino": "Destino",
-            "metodo_contato": "Contato preferido",
-            "horario_contato": "Horário preferido"
-        }
-
-        tem_dados = False
-        for campo, label in mapeamento.items():
-            if campo in estado_atual and estado_atual[campo]:
-                resumo_texto += f"✅ {label}: {estado_atual[campo]}\n"
-                tem_dados = True
-
-        if not tem_dados:
-            resumo_texto += "Ainda não coletamos informações sobre sua viagem.\n"
-
-        resumo_texto += "\n💬 Digite *menu* para ver as opções ou continue de onde parou!"
-
-        return resumo_texto, estado_atual, {}
-
-    elif comando_detectado == "ajuda":
-        print("[DEBUG] Comando 'ajuda' detectado")
-        resposta = MENSAGENS.get("ajuda_comandos",
-            "💡 *Comandos disponíveis:*\n\n"
-            "• *menu* - Ver menu principal\n"
-            "• *resumo* - Ver dados coletados\n"
-            "• *ajuda* - Ver esta mensagem\n"
-            "• *contato* - Falar com especialista"
-        )
-        return resposta, estado_atual, {}
-
-    elif comando_detectado == "contato":
-        print("[DEBUG] Comando 'contato' detectado - redireciona para atendimento")
-        novo_estado = {**estado_atual, "estado": "atendimento_solicitado"}
-        resposta = MENSAGENS["atendimento_solicitado"].format(
-            nome=nome if nome else "Olá",
-            horario=HORARIO_ATENDIMENTO
-        )
-        return resposta, novo_estado, {"tipo_msg": "urgente"}
-
+    
     # Verifica se o cliente já solicitou atendimento
     if estado == "atendimento_solicitado":
         print("[DEBUG] Cliente em estado de atendimento solicitado")
@@ -540,7 +482,7 @@ def processar_mensagem(sender, mensagem, estado_atual):
                 horario=HORARIO_ATENDIMENTO
             )
             return resposta, estado_atual, {"tipo_msg": "urgente"}
-
+        
         # Para qualquer outra mensagem após solicitar atendimento, enviar uma resposta genérica
         # que informa que um atendente humano entrará em contato
         resposta = (
@@ -550,6 +492,13 @@ def processar_mensagem(sender, mensagem, estado_atual):
             f"ou WhatsApp: (11) 91529-0344"
         )
         return resposta, estado_atual, {}
+    
+    # Comando para menu a qualquer momento
+    if mensagem.lower() == "menu" and nome:
+        print("[DEBUG] Comando de menu detectado")
+        novo_estado = {**estado_atual, "estado": "menu"}
+        resposta = formatar_menu("principal", nome)
+        return resposta, novo_estado, {}
     
     # Processamento baseado no estado
     if estado == "aguardando_nome":
@@ -603,16 +552,13 @@ def processar_mensagem(sender, mensagem, estado_atual):
             novo_estado = {**estado_atual, "estado": "pos_conhecer_tripulacao"}
             resposta = MENSAGENS["apresentacao_empresa"].format(nome=nome)
             return resposta, novo_estado, {}
-
-        elif mensagem == "2":  # Iniciar viagem (NOVA QUALIFICAÇÃO)
-            print("[DEBUG] Opção 2 selecionada - nova qualificação inicial")
-            novo_estado = {**estado_atual, "estado": "qualificacao_inicial"}
-            # Formata a nova pergunta combinada
-            from config import get_progresso
-            qualif = MENSAGENS["qualificacao_inicial"]
-            resposta = f"{qualif['titulo']}\n\n{qualif['pergunta']}"
+            
+        elif mensagem == "2":  # Iniciar viagem
+            print("[DEBUG] Opção 2 selecionada")
+            novo_estado = {**estado_atual, "estado": "perguntando_periodo_viagem"}
+            resposta = formatar_menu("periodo_viagem", nome)
             return resposta, novo_estado, {}
-
+            
         elif mensagem == "3":  # Solicitar atendimento
             print("[DEBUG] Opção 3 selecionada")
             novo_estado = {**estado_atual, "estado": "atendimento_solicitado"}
@@ -622,7 +568,7 @@ def processar_mensagem(sender, mensagem, estado_atual):
             )
             # Aqui metadados indicam que é uma mensagem urgente
             return resposta, novo_estado, {"tipo_msg": "urgente"}
-
+            
         else:
             print("[DEBUG] Opção inválida no menu")
             # Resposta inválida para o menu
@@ -678,158 +624,6 @@ def processar_mensagem(sender, mensagem, estado_atual):
             resposta = formatar_menu("interesses", nome)
             return resposta, novo_estado, {}
     
-    # NOVO: Estado de qualificação inicial (combina pessoas + orçamento + quando)
-    elif estado == "qualificacao_inicial":
-        print("[DEBUG] Processando qualificacao_inicial com IA")
-        try:
-            # Usa IA para extrair informações da resposta livre
-            prompt_extracao = f"""
-Analise esta mensagem do cliente e extraia 3 informações:
-1. Número de pessoas que vão viajar
-2. Orçamento aproximado por pessoa (em reais)
-3. Quando pretende viajar (mês/período)
-
-Mensagem do cliente: "{mensagem}"
-
-Responda APENAS no formato JSON:
-{{"pessoas": "X pessoas", "orcamento": "R$ X.XXX", "quando": "mês/período"}}
-
-Se alguma informação não estiver clara, use "Não especificado".
-"""
-            resposta_ia = ai_service.gerar_resposta_simples(prompt_extracao)
-            print(f"[DEBUG] Resposta IA: {resposta_ia}")
-
-            # Tenta parsear JSON
-            import json
-            try:
-                dados = json.loads(resposta_ia)
-                pessoas = dados.get("pessoas", "Não especificado")
-                orcamento = dados.get("orcamento", "Não especificado")
-                quando = dados.get("quando", "Não especificado")
-            except:
-                # Fallback se JSON não parseou
-                pessoas = "Não especificado"
-                orcamento = "Não especificado"
-                quando = "Não especificado"
-
-            # Salva no estado
-            novo_estado = {
-                **estado_atual,
-                "estado": "experiencia_desejada",
-                "num_pessoas": pessoas,
-                "orcamento_pp": orcamento,
-                "periodo_desejado": quando
-            }
-
-            # Atualiza Telegram
-            telegram_service.atualizar_perfil(sender, "Pessoas", pessoas)
-            telegram_service.atualizar_perfil(sender, "Orçamento p/pessoa", orcamento)
-            telegram_service.atualizar_perfil(sender, "Quando viajar", quando)
-
-            # Próxima pergunta: experiência desejada (combina interesses + destino)
-            from config import get_progresso
-            exp = MENSAGENS["experiencia_desejada"]
-            resposta = (
-                f"✅ Ótimo, {nome}!\n\n"
-                f"📊 Entendi:\n"
-                f"• {pessoas}\n"
-                f"• Orçamento: {orcamento}\n"
-                f"• Período: {quando}\n\n"
-                f"─────────────\n\n"
-                f"{exp['titulo']}\n\n"
-                f"{exp['pergunta']}"
-            )
-
-            return resposta, novo_estado, {}
-
-        except Exception as e:
-            print(f"[ERRO] Erro ao processar qualificacao_inicial: {e}")
-            # Fallback: pede para reformular
-            resposta = (
-                f"{nome}, não consegui entender todas as informações. "
-                f"Pode me dizer de forma mais clara:\n\n"
-                f"• Quantas pessoas?\n"
-                f"• Orçamento por pessoa?\n"
-                f"• Quando pretende viajar?"
-            )
-            return resposta, estado_atual, {}
-
-    # NOVO: Estado de experiência desejada (combina interesses + destino)
-    elif estado == "experiencia_desejada":
-        print("[DEBUG] Processando experiencia_desejada")
-        # Aqui podemos usar IA para entender resposta livre ou aceitar múltiplas escolhas
-        # Por simplicidade, vou aceitar resposta livre e passar para próximo passo
-
-        novo_estado = {
-            **estado_atual,
-            "estado": "quando_quanto_tempo",
-            "interesse_descricao": mensagem
-        }
-
-        # Atualiza Telegram
-        telegram_service.atualizar_perfil(sender, "Interesses", mensagem[:100])
-
-        # Próxima pergunta: quando e quanto tempo
-        from config import get_progresso
-        quando_qt = MENSAGENS["quando_quanto_tempo"]
-        resposta = f"{quando_qt['titulo']}\n\n{quando_qt['pergunta']}"
-
-        return resposta, novo_estado, {}
-
-    # NOVO: Estado de quando e quanto tempo (combina período + duração)
-    elif estado == "quando_quanto_tempo":
-        print("[DEBUG] Processando quando_quanto_tempo")
-        # Extrai informações com IA
-        try:
-            prompt_extracao = f"""
-Analise esta mensagem e extraia:
-1. Quando a pessoa quer viajar (mês/período)
-2. Quantos dias de viagem
-
-Mensagem: "{mensagem}"
-
-Responda APENAS JSON:
-{{"quando": "período", "duracao": "X dias"}}
-"""
-            resposta_ia = ai_service.gerar_resposta_simples(prompt_extracao)
-
-            import json
-            try:
-                dados = json.loads(resposta_ia)
-                quando = dados.get("quando", mensagem)
-                duracao = dados.get("duracao", "Não especificado")
-            except:
-                quando = mensagem
-                duracao = "Não especificado"
-
-            # Salva e vai para solicitação de contato
-            novo_estado = {
-                **estado_atual,
-                "estado": "perguntando_forma_contato",
-                "periodo_final": quando,
-                "duracao_final": duracao
-            }
-
-            telegram_service.atualizar_perfil(sender, "Período final", quando)
-            telegram_service.atualizar_perfil(sender, "Duração", duracao)
-
-            # Pergunta forma de contato
-            resposta = f"🎯 Perfeito, {nome}! {formatar_menu('forma_contato')}"
-
-            return resposta, novo_estado, {}
-
-        except Exception as e:
-            print(f"[ERRO] Erro ao processar quando_quanto_tempo: {e}")
-            # Vai para próximo mesmo assim
-            novo_estado = {
-                **estado_atual,
-                "estado": "perguntando_forma_contato",
-                "periodo_final": mensagem,
-                "duracao_final": "Não especificado"
-            }
-            resposta = f"✅ Anotado! {formatar_menu('forma_contato')}"
-            return resposta, novo_estado, {}
-
     # Estado de perguntando interesses
     elif estado == "perguntando_interesses":
         print("[DEBUG] Processando perguntando_interesses")

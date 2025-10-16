@@ -53,3 +53,28 @@ class AIService:
         except Exception as e:
             print(f"[ERRO GPT] {e}")
             return f"⚠️ {'Olá' if not nome_cliente else nome_cliente}, desculpe, tivemos um probleminha técnico. Pode tentar novamente em instantes?"
+
+    def gerar_resposta_simples(self, prompt):
+        """
+        Gera uma resposta simples sem contexto adicional
+        Útil para extração de informações
+
+        Args:
+            prompt: Prompt direto para a IA
+
+        Returns:
+            str: Resposta gerada
+        """
+        try:
+            resposta = self.client.chat.completions.create(
+                model="gpt-4o-mini",  # Modelo mais rápido e barato para extração
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,  # Baixa temperatura para respostas mais consistentes
+                max_tokens=150
+            ).choices[0].message.content.strip()
+
+            return resposta
+
+        except Exception as e:
+            print(f"[ERRO GPT SIMPLES] {e}")
+            return "{}"  # Retorna JSON vazio em caso de erro
