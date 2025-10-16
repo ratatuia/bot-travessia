@@ -331,3 +331,22 @@ def get_progresso(passo_atual, total_passos=5):
     completo = "━" * passo_atual
     vazio = "━" * (total_passos - passo_atual)
     return f"{completo}{vazio} {passo_atual}/{total_passos}"
+
+# NOVO: Detecta comandos especiais na mensagem do usuário
+def detectar_comando(mensagem):
+    """
+    Verifica se a mensagem contém um comando especial
+
+    Args:
+        mensagem: Texto da mensagem do usuário
+
+    Returns:
+        str ou None: Nome do comando detectado ou None
+    """
+    mensagem_lower = mensagem.lower().strip()
+
+    for comando, palavras_chave in COMANDOS_ESPECIAIS.items():
+        if mensagem_lower in palavras_chave:
+            return comando
+
+    return None
