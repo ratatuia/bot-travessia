@@ -565,7 +565,7 @@ def processar_mensagem(sender, mensagem, estado_atual):
 
         # Captura o nome válido
         novo_estado = {"nome": nome_sanitizado, "estado": "aguardando_email"}
-        resposta = MENSAGENS["pedir_email"]
+        resposta = MENSAGENS["pedir_email"].format(nome=nome_sanitizado)
         return resposta, novo_estado, {}
         
     elif estado == "aguardando_email":
