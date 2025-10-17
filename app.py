@@ -10,6 +10,11 @@ import os
 import psutil
 import sqlite3
 import shutil
+import sys
+
+# Força unbuffered output para ver logs em tempo real no Render
+sys.stdout = open(sys.stdout.fileno(), mode='w', buffering=1)
+sys.stderr = open(sys.stderr.fileno(), mode='w', buffering=1)
 
 # Variável global para rastrear quando o bot foi iniciado
 app_start_time = datetime.datetime.now()
@@ -326,7 +331,7 @@ def health_check():
 # @require_twilio_signature  # TEMPORARIAMENTE DESABILITADO para debug
 def whatsapp_bot():
     # Logs de debug (mascarando dados sensíveis)
-    print("====== NOVA REQUISIÇÃO WEBHOOK ======")
+    print("====== NOVA REQUISIÇÃO WEBHOOK ======", flush=True)
     registrar_log("info", f"Nova requisição webhook de {request.headers.get('X-Forwarded-For', request.remote_addr)}")
 
     # Extrai informações da requisição
@@ -342,14 +347,14 @@ def whatsapp_bot():
         resp = MessagingResponse()
         resp.message("Desculpe, ocorreu um erro com seu número de telefone.")
         return str(resp)
-    
-    print(f"[CLIENTE] {sender} disse: {incoming_msg}")
+
+    print(f"[CLIENTE] {sender} disse: {incoming_msg}", flush=True)
     registrar_log("info", f"Mensagem recebida de {sender}: {incoming_msg}")
     
     try:
         # Inicialização para novas conversas ou saudações
         if is_greeting(incoming_msg):
-            print(f"[DEBUG] Detectada saudação: {incoming_msg}")
+            print(f"[DEBUG] Detectada saudação: {incoming_msg}", flush=True)
             registrar_log("info", f"Nova conversa iniciada com {sender}")
             # Inicia nova conversa
             update_client_state(sender, {"estado": "aguardando_nome"})
@@ -375,21 +380,21 @@ def whatsapp_bot():
         
         # Obtém o estado atual do cliente
         estado_atual = get_client_state(sender)
-        print(f"[DEBUG] Estado atual: {estado_atual}")
-        
+        print(f"[DEBUG] Estado atual: {estado_atual}", flush=True)
+
         # Determina nome do cliente se disponível
         nome_cliente = estado_atual.get("nome") if estado_atual else None
-        print(f"[DEBUG] Nome do cliente: {nome_cliente}")
+        print(f"[DEBUG] Nome do cliente: {nome_cliente}", flush=True)
         
         # Processa a mensagem com base no estado atual
         try:
-            print(f"[DEBUG] Processando mensagem...")
+            print(f"[DEBUG] Processando mensagem...", flush=True)
             resposta, novo_estado, meta = processar_mensagem(sender, incoming_msg, estado_atual)
-            print(f"[DEBUG] Processamento bem-sucedido. Novo estado: {novo_estado}")
-            print(f"[DEBUG] Resposta: {resposta[:100]}...")  # Imprime apenas o início da resposta
+            print(f"[DEBUG] Processamento bem-sucedido. Novo estado: {novo_estado}", flush=True)
+            print(f"[DEBUG] Resposta: {resposta[:100]}...", flush=True)  # Imprime apenas o início da resposta
         except Exception as e:
-            print(f"[ERRO CRÍTICO] Erro no processamento da mensagem: {e}")
-            print(f"[TRACEBACK] {traceback.format_exc()}")
+            print(f"[ERRO CRÍTICO] Erro no processamento da mensagem: {e}", flush=True)
+            print(f"[TRACEBACK] {traceback.format_exc()}", flush=True)
             capturar_erro("processamento_mensagem", e)
             # Resposta genérica de erro
             resposta = f"{'Olá' if not nome_cliente else nome_cliente}, desculpe, tivemos um probleminha técnico. Pode tentar novamente em instantes?"
