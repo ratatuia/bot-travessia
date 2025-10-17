@@ -21,6 +21,9 @@ from telegram_service import TelegramService
 from openai_service import AIService
 from log_service import registrar_log, capturar_erro
 
+# Importa observability para inicializar logging em arquivo
+from observability import logger, metrics, analytics
+
 # Importações de segurança
 from security import (
     require_api_key,
