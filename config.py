@@ -74,7 +74,7 @@ MENUS = {
     # COMBINADO: Período + Duração
     "quando_quanto_tempo": {
         "titulo": "🗓️ Quando e por quanto tempo?\n\n━━━━━━━━━━ 3/5",
-        "subtitulo": "⚡ ATENÇÃO: Promoções para 2025 acabando rápido!",
+        "subtitulo": "✨ Reservando agora: melhores cabines + preços especiais!",
         "opcoes": [
             "🏃‍♂️ Em breve + Mini (3-5 dias) - Escapada rápida!",
             "☀️ Meio do ano + Padrão (6-9 dias) - Equilíbrio perfeito",
