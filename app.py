@@ -58,6 +58,18 @@ limiter = Limiter(
 # Adiciona headers de segurança a todas as respostas
 @app.after_request
 def after_request_func(response):
+    # Salva métricas a cada 10 requisições
+    if hasattr(metrics, '_request_count'):
+        metrics._request_count += 1
+    else:
+        metrics._request_count = 1
+
+    if metrics._request_count % 10 == 0:
+        try:
+            metrics.save_to_file()
+        except:
+            pass
+
     return add_security_headers(response)
 
 # ADICIONE A ROTA RAIZ AQUI

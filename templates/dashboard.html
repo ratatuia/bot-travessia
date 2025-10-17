@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔍 Dashboard - Bot Travessia</title>
+    <title>🚢 Dashboard - Travessia dos Sonhos</title>
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -17,7 +17,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* Gradiente oceano → céu dourado */
+            background: linear-gradient(135deg, #0066cc 0%, #0099ff 50%, #FFD700 100%);
             color: #333;
             min-height: 100vh;
             padding: 15px;
@@ -30,227 +31,280 @@
         }
 
         .header {
-            background: white;
-            border-radius: 15px;
-            padding: 20px 25px;
-            margin-bottom: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 30px rgba(0, 102, 204, 0.25);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border: 2px solid rgba(255, 215, 0, 0.3);
         }
 
         .header h1 {
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 2rem;
+            background: linear-gradient(135deg, #0066cc 0%, #FFD700 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            font-weight: 800;
         }
 
         .header-subtitle {
-            font-size: 0.85rem;
-            color: #666;
-            margin-top: 2px;
+            font-size: 0.9rem;
+            color: #0066cc;
+            margin-top: 5px;
+            font-weight: 500;
         }
 
         .status-badge {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: #d4edda;
-            color: #155724;
+            gap: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #00cc88 0%, #00ff99 100%);
+            color: white;
             border-radius: 50px;
             font-weight: bold;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 204, 136, 0.4);
         }
 
         .status-dot {
-            width: 10px;
-            height: 10px;
-            background: #28a745;
+            width: 12px;
+            height: 12px;
+            background: white;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
         }
 
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 15px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
         .metric-card {
-            background: white;
-            border-radius: 12px;
-            padding: 18px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.15);
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0066cc, #FFD700, #0066cc);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
 
         .metric-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 102, 204, 0.25);
+            border-color: rgba(255, 215, 0, 0.5);
         }
 
         .metric-icon {
-            font-size: 1.8rem;
-            margin-bottom: 8px;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 2px 4px rgba(0, 102, 204, 0.2));
         }
 
         .metric-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: bold;
-            color: #667eea;
-            margin-bottom: 4px;
+            background: linear-gradient(135deg, #0066cc 0%, #0099ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
             line-height: 1;
         }
 
         .metric-label {
-            font-size: 0.75rem;
-            color: #666;
+            font-size: 0.8rem;
+            color: #0066cc;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
 
         .metric-change {
-            font-size: 0.7rem;
-            margin-top: 8px;
-            padding: 4px 8px;
-            border-radius: 15px;
+            font-size: 0.75rem;
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 20px;
             display: inline-block;
+            font-weight: 600;
         }
 
         .metric-change.positive {
-            background: #d4edda;
-            color: #155724;
+            background: linear-gradient(135deg, #00cc88 0%, #00ff99 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 204, 136, 0.3);
         }
 
         .metric-change.neutral {
-            background: #e2e3e5;
-            color: #383d41;
+            background: #e8f4ff;
+            color: #0066cc;
         }
 
         .main-row {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 20px;
+            margin-bottom: 20px;
         }
 
         .charts-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 15px;
         }
 
         .chart-card {
-            background: white;
-            border-radius: 12px;
-            padding: 18px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.15);
+            border: 2px solid rgba(255, 215, 0, 0.2);
         }
 
         .chart-card h3 {
-            margin-bottom: 12px;
-            color: #667eea;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #0066cc 0%, #FFD700 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 1rem;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
         .chart-card canvas {
-            max-height: 200px !important;
+            max-height: 220px !important;
         }
 
         .side-panel {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
         }
 
         .compact-card {
-            background: white;
-            border-radius: 12px;
-            padding: 18px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.15);
+            border: 2px solid rgba(255, 215, 0, 0.2);
         }
 
         .compact-card h3 {
-            margin-bottom: 12px;
-            color: #667eea;
-            font-size: 1rem;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #0066cc 0%, #FFD700 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
         .refresh-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #0066cc;
             border: none;
-            padding: 8px 20px;
+            padding: 10px 24px;
             border-radius: 50px;
             font-weight: bold;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             cursor: pointer;
-            transition: transform 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
         }
 
         .refresh-btn:hover {
             transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
         }
 
         .health-status {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .health-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+            border-radius: 10px;
+            padding: 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+
+        .health-item:hover {
+            transform: translateX(5px);
         }
 
         .health-item.healthy {
-            border-left: 4px solid #28a745;
+            border-left: 5px solid #00cc88;
         }
 
         .health-item.warning {
-            border-left: 4px solid #ffc107;
+            border-left: 5px solid #FFD700;
         }
 
         .health-item.error {
-            border-left: 4px solid #dc3545;
+            border-left: 5px solid #ff4444;
         }
 
         .health-item h4 {
             margin: 0;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            color: #0066cc;
+            font-weight: 600;
         }
 
         .health-status-text {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: bold;
         }
 
         .last-update {
             text-align: center;
             color: white;
-            margin-top: 12px;
-            font-size: 0.8rem;
-            opacity: 0.9;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            opacity: 0.95;
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         @media (max-width: 1400px) {
@@ -270,7 +324,7 @@
             }
 
             .header h1 {
-                font-size: 1.5rem;
+                font-size: 1.6rem;
             }
 
             .metrics-grid {
@@ -288,13 +342,13 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <h1>🔍 Dashboard Bot Travessia</h1>
-                <p class="header-subtitle">Observabilidade em Tempo Real</p>
+                <h1>🚢 Travessia dos Sonhos - Dashboard</h1>
+                <p class="header-subtitle">⚓ Monitoramento em Tempo Real</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
                 <div class="status-badge">
                     <span class="status-dot"></span>
-                    <span id="status-text">Online</span>
+                    <span id="status-text">🌊 Navegando</span>
                 </div>
                 <button class="refresh-btn" onclick="refreshDashboard()">
                     🔄 Atualizar
@@ -307,26 +361,26 @@
             <div class="metric-card">
                 <div class="metric-icon">⏱️</div>
                 <div class="metric-value" id="uptime">--</div>
-                <div class="metric-label">Uptime</div>
+                <div class="metric-label">⚓ Tempo Online</div>
             </div>
 
             <div class="metric-card">
-                <div class="metric-icon">👥</div>
+                <div class="metric-icon">🧳</div>
                 <div class="metric-value" id="total-clients">--</div>
-                <div class="metric-label">Total Clientes</div>
+                <div class="metric-label">✈️ Viajantes</div>
                 <div class="metric-change positive" id="clients-change">--</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-icon">💬</div>
                 <div class="metric-value" id="messages-24h">--</div>
-                <div class="metric-label">Mensagens (24h)</div>
+                <div class="metric-label">📱 Conversas (24h)</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-icon">🎯</div>
                 <div class="metric-value" id="conversion-rate">--%</div>
-                <div class="metric-label">Taxa de Conversão</div>
+                <div class="metric-label">🏆 Taxa de Conversão</div>
             </div>
         </div>
 
@@ -340,17 +394,17 @@
                 </div>
 
                 <div class="chart-card">
-                    <h3>🔄 Funil de Conversão</h3>
+                    <h3>🗺️ Jornada do Cliente</h3>
                     <canvas id="funnelChart"></canvas>
                 </div>
 
                 <div class="chart-card">
-                    <h3>⚡ Performance (Top 5)</h3>
+                    <h3>⚡ Performance do Sistema</h3>
                     <canvas id="performanceChart"></canvas>
                 </div>
 
                 <div class="chart-card">
-                    <h3>📈 Clientes por Estado</h3>
+                    <h3>📈 Etapas dos Viajantes</h3>
                     <canvas id="statesChart"></canvas>
                 </div>
             </div>
@@ -359,7 +413,7 @@
             <div class="side-panel">
                 <!-- Health Status -->
                 <div class="compact-card">
-                    <h3>💚 Status dos Componentes</h3>
+                    <h3>💚 Status dos Sistemas</h3>
                     <div class="health-status" id="health-status">
                         <!-- Populated by JS -->
                     </div>
@@ -368,8 +422,8 @@
         </div>
 
         <div class="last-update">
-            Última atualização: <span id="last-update-time">--</span> |
-            Auto-refresh: <span id="countdown">30</span>s
+            🕐 Última atualização: <span id="last-update-time">--</span> |
+            🔄 Auto-refresh: <span id="countdown">30</span>s
         </div>
     </div>
 
@@ -388,10 +442,12 @@
                         position: 'bottom',
                         labels: {
                             font: {
-                                size: 10
+                                size: 11,
+                                weight: '600'
                             },
-                            boxWidth: 12,
-                            padding: 8
+                            boxWidth: 14,
+                            padding: 10,
+                            color: '#0066cc'
                         }
                     }
                 },
@@ -399,18 +455,35 @@
                     x: {
                         ticks: {
                             font: {
-                                size: 9
-                            }
+                                size: 10
+                            },
+                            color: '#0066cc'
+                        },
+                        grid: {
+                            color: 'rgba(0, 102, 204, 0.1)'
                         }
                     },
                     y: {
                         ticks: {
                             font: {
-                                size: 9
-                            }
+                                size: 10
+                            },
+                            color: '#0066cc'
+                        },
+                        grid: {
+                            color: 'rgba(0, 102, 204, 0.1)'
                         }
                     }
                 }
+            };
+
+            // Cores do tema cruzeiro
+            const cruiseColors = {
+                ocean: '#0066cc',
+                sky: '#0099ff',
+                gold: '#FFD700',
+                sunset: '#FFA500',
+                coral: '#FF6B6B'
             };
 
             // Activity Chart
@@ -420,33 +493,40 @@
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Mensagens',
+                        label: '💬 Mensagens',
                         data: [],
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderColor: cruiseColors.ocean,
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
                         tension: 0.4,
-                        fill: true
+                        fill: true,
+                        borderWidth: 3,
+                        pointBackgroundColor: cruiseColors.gold,
+                        pointBorderColor: cruiseColors.ocean,
+                        pointBorderWidth: 2,
+                        pointRadius: 4
                     }]
                 },
                 options: chartOptions
             });
 
-            // Funnel Chart
+            // Funnel Chart (Jornada do Cliente)
             const funnelCtx = document.getElementById('funnelChart').getContext('2d');
             funnelChart = new Chart(funnelCtx, {
                 type: 'bar',
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Clientes',
+                        label: '🧳 Viajantes',
                         data: [],
                         backgroundColor: [
-                            '#667eea',
-                            '#764ba2',
-                            '#f093fb',
-                            '#4facfe',
-                            '#00f2fe'
-                        ]
+                            cruiseColors.ocean,
+                            cruiseColors.sky,
+                            cruiseColors.gold,
+                            cruiseColors.sunset,
+                            cruiseColors.coral
+                        ],
+                        borderWidth: 0,
+                        borderRadius: 8
                     }]
                 },
                 options: {
@@ -462,15 +542,17 @@
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Tempo médio (ms)',
+                        label: '⚡ Tempo (ms)',
                         data: [],
-                        backgroundColor: '#ffc107'
+                        backgroundColor: cruiseColors.gold,
+                        borderWidth: 0,
+                        borderRadius: 8
                     }]
                 },
                 options: chartOptions
             });
 
-            // States Chart
+            // States Chart (Rosca)
             const statesCtx = document.getElementById('statesChart').getContext('2d');
             statesChart = new Chart(statesCtx, {
                 type: 'doughnut',
@@ -479,17 +561,21 @@
                     datasets: [{
                         data: [],
                         backgroundColor: [
-                            '#667eea',
-                            '#764ba2',
-                            '#f093fb',
-                            '#4facfe',
-                            '#00f2fe',
+                            cruiseColors.ocean,
+                            cruiseColors.sky,
+                            cruiseColors.gold,
+                            cruiseColors.sunset,
+                            cruiseColors.coral,
                             '#43e97b',
                             '#fa709a'
-                        ]
+                        ],
+                        borderWidth: 0
                     }]
                 },
-                options: chartOptions
+                options: {
+                    ...chartOptions,
+                    cutout: '60%'
+                }
             });
         }
 
@@ -527,38 +613,69 @@
             activityChart.data.datasets[0].data = counts;
             activityChart.update();
 
-            // Update Funnel Chart
-            const stateOrder = ['Aguardando Nome', 'Aguardando Email', 'Menu', 'Interesses', 'Atendimento'];
+            // Update Funnel Chart - CORRIGIDO!
+            // Labels simplificados e mais amigáveis
+            const stateLabels = ['🙋 Início', '📧 Email', '🗺️ Menu', '⭐ Interesses', '✅ Convertido'];
+
+            // Mapeia os estados reais do banco para o funil
+            const clientsByState = data.db_stats.clients_by_state || {};
             const stateCounts = [
-                data.db_stats.clients_by_state?.aguardando_nome || 0,
-                data.db_stats.clients_by_state?.aguardando_email || 0,
-                data.db_stats.clients_by_state?.menu || 0,
-                data.db_stats.clients_by_state?.perguntando_interesses || 0,
-                data.db_stats.clients_by_state?.atendimento_solicitado || 0
+                clientsByState.aguardando_nome || 0,
+                clientsByState.aguardando_email || 0,
+                clientsByState.menu || 0,
+                clientsByState.qualificacao_inicial || clientsByState.experiencia_desejada || clientsByState.quando_quanto_tempo || 0,
+                clientsByState.atendimento_solicitado || 0
             ];
 
-            funnelChart.data.labels = stateOrder;
+            funnelChart.data.labels = stateLabels;
             funnelChart.data.datasets[0].data = stateCounts;
             funnelChart.update();
 
-            // Update Performance Chart
+            // Update Performance Chart - CORRIGIDO!
             const timings = data.metrics.timings || {};
-            const topTimings = Object.entries(timings)
-                .sort((a, b) => b[1].avg_ms - a[1].avg_ms)
-                .slice(0, 5);
 
-            performanceChart.data.labels = topTimings.map(([key]) =>
-                key.replace('operation.', '').replace('function.', '')
-            );
-            performanceChart.data.datasets[0].data = topTimings.map(([, val]) => val.avg_ms);
+            // Se não há dados de timing, mostra dados de exemplo
+            if (Object.keys(timings).length === 0) {
+                performanceChart.data.labels = ['Sistema inicializando...'];
+                performanceChart.data.datasets[0].data = [0];
+            } else {
+                const topTimings = Object.entries(timings)
+                    .sort((a, b) => b[1].avg_ms - a[1].avg_ms)
+                    .slice(0, 5);
+
+                performanceChart.data.labels = topTimings.map(([key]) => {
+                    // Formata os nomes das operações
+                    return key
+                        .replace('operation.', '')
+                        .replace('function.', '')
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, l => l.toUpperCase());
+                });
+                performanceChart.data.datasets[0].data = topTimings.map(([, val]) => val.avg_ms);
+            }
             performanceChart.update();
 
-            // Update States Chart
-            const clientsByState = data.db_stats.clients_by_state || {};
-            statesChart.data.labels = Object.keys(clientsByState).map(s =>
-                s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-            );
-            statesChart.data.datasets[0].data = Object.values(clientsByState);
+            // Update States Chart (gráfico de rosca)
+            if (Object.keys(clientsByState).length > 0) {
+                statesChart.data.labels = Object.keys(clientsByState).map(s => {
+                    // Traduz os estados para português amigável
+                    const translations = {
+                        'aguardando_nome': '🙋 Aguardando Nome',
+                        'aguardando_email': '📧 Aguardando Email',
+                        'menu': '🗺️ No Menu',
+                        'qualificacao_inicial': '📝 Qualificação',
+                        'experiencia_desejada': '⭐ Escolhendo Experiência',
+                        'quando_quanto_tempo': '📅 Definindo Datas',
+                        'atendimento_solicitado': '✅ Convertido',
+                        'pos_conhecer_tripulacao': '👋 Conhecendo Empresa'
+                    };
+                    return translations[s] || s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                });
+                statesChart.data.datasets[0].data = Object.values(clientsByState);
+            } else {
+                statesChart.data.labels = ['Sem dados ainda'];
+                statesChart.data.datasets[0].data = [1];
+            }
             statesChart.update();
 
             // Update Health Status
@@ -582,7 +699,7 @@
             components.forEach(comp => {
                 const status = health[comp.key] ? 'healthy' : 'error';
                 const statusText = health[comp.key] ? '✅ Online' : '❌ Offline';
-                const statusColor = health[comp.key] ? '#28a745' : '#dc3545';
+                const statusColor = health[comp.key] ? '#00cc88' : '#ff4444';
 
                 const div = document.createElement('div');
                 div.className = `health-item ${status}`;
