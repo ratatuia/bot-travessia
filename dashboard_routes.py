@@ -216,6 +216,93 @@ def api_health():
 # Health Check Detalhado
 # ===================================
 
+@dashboard_bp.route('/api/dashboard/debug')
+def api_debug():
+    """Endpoint de debug para investigar dados do banco"""
+    try:
+        with get_connection() as conn:
+            cursor = get_cursor(conn)
+
+            debug_info = {
+                'database_type': 'PostgreSQL' if USE_POSTGRES else 'SQLite',
+                'total_messages': 0,
+                'messages_24h': 0,
+                'sample_timestamps': [],
+                'activity_by_hour_raw': {},
+                'clients_by_state': {}
+            }
+
+            # Total de mensagens
+            cursor.execute("SELECT COUNT(*) FROM mensagens")
+            result = cursor.fetchone()
+            debug_info['total_messages'] = result['count'] if USE_POSTGRES else result[0]
+
+            # Mensagens 24h
+            if USE_POSTGRES:
+                cursor.execute("SELECT COUNT(*) FROM mensagens WHERE timestamp >= NOW() - INTERVAL '1 day'")
+            else:
+                cursor.execute("SELECT COUNT(*) FROM mensagens WHERE datetime(timestamp) >= datetime('now', '-1 day')")
+            result = cursor.fetchone()
+            debug_info['messages_24h'] = result['count'] if USE_POSTGRES else result[0]
+
+            # Sample de timestamps
+            if USE_POSTGRES:
+                cursor.execute("SELECT timestamp, TO_CHAR(timestamp, 'HH24') as hour FROM mensagens WHERE timestamp >= NOW() - INTERVAL '1 day' ORDER BY timestamp DESC LIMIT 10")
+            else:
+                cursor.execute("SELECT timestamp, strftime('%H', timestamp) as hour FROM mensagens WHERE datetime(timestamp) >= datetime('now', '-1 day') ORDER BY timestamp DESC LIMIT 10")
+
+            results = cursor.fetchall()
+            if USE_POSTGRES:
+                debug_info['sample_timestamps'] = [{'timestamp': str(row['timestamp']), 'hour': row['hour']} for row in results]
+            else:
+                debug_info['sample_timestamps'] = [{'timestamp': row[0], 'hour': row[1]} for row in results]
+
+            # Activity by hour (query exata do dashboard)
+            if USE_POSTGRES:
+                cursor.execute("""
+                    SELECT
+                        TO_CHAR(timestamp, 'HH24') as hour,
+                        COUNT(*) as count
+                    FROM mensagens
+                    WHERE timestamp >= NOW() - INTERVAL '1 day'
+                    GROUP BY TO_CHAR(timestamp, 'HH24')
+                    ORDER BY hour
+                """)
+            else:
+                cursor.execute("""
+                    SELECT
+                        strftime('%H', timestamp) as hour,
+                        COUNT(*) as count
+                    FROM mensagens
+                    WHERE datetime(timestamp) >= datetime('now', '-1 day')
+                    GROUP BY hour
+                    ORDER BY hour
+                """)
+
+            results = cursor.fetchall()
+            if USE_POSTGRES:
+                debug_info['activity_by_hour_raw'] = {row['hour']: row['count'] for row in results}
+            else:
+                debug_info['activity_by_hour_raw'] = dict(results)
+
+            # Clients by state
+            cursor.execute("SELECT estado, COUNT(*) as count FROM clientes WHERE estado IS NOT NULL GROUP BY estado")
+            results = cursor.fetchall()
+            if USE_POSTGRES:
+                debug_info['clients_by_state'] = {row['estado']: row['count'] for row in results}
+            else:
+                debug_info['clients_by_state'] = dict(results)
+
+            return jsonify(debug_info)
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
 @dashboard_bp.route('/api/health/detailed')
 def detailed_health():
     """Health check detalhado com métricas adicionais"""
