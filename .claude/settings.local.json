@@ -9,7 +9,13 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(curl -X POST https://bot-travessia.onrender.com/zap -d \"Body=teste\" -d \"From=whatsapp:+5511999999999\" -v)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(\"venv/Scripts/python.exe\" -m pytest test_bot_fluxo.py -v --tb=short)",
+      "Bash(\"venv/Scripts/python.exe\" -m pytest test_bot_fluxo.py -v --tb=line)",
+      "Bash(\"venv/Scripts/python.exe\" -m pytest test_bot_fluxo.py --html=relatorio_testes.html --self-contained-html -v)",
+      "Bash(\"venv/Scripts/python.exe\" -m pytest test_bot_fluxo.py::TestFluxoMenuPrincipal -v)",
+      "Bash(\"venv/Scripts/python.exe\" -m pytest test_bot_fluxo.py -v)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
