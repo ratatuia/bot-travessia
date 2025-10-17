@@ -672,13 +672,23 @@ def processar_mensagem(sender, mensagem, estado_atual):
             prompt_extracao = f"""
 Analise esta mensagem do cliente e extraia 3 informações:
 1. Número de pessoas que vão viajar
-2. Orçamento aproximado por pessoa (em reais)
+2. Orçamento aproximado POR PESSOA (em reais)
 3. Quando pretende viajar (mês/período)
+
+IMPORTANTE sobre o orçamento:
+- Se o cliente diz "10 mil" ou "10000", assuma que é o orçamento POR PESSOA
+- NÃO divida o valor pelo número de pessoas
+- Se o cliente diz "10 mil para 2 pessoas", então divida (10.000 / 2 = 5.000 por pessoa)
+- Se não especificar "total" ou "para X pessoas", considere o valor como sendo por pessoa
 
 Mensagem do cliente: "{mensagem}"
 
 Responda APENAS no formato JSON:
-{{"pessoas": "X pessoas", "orcamento": "R$ X.XXX", "quando": "mês/período"}}
+{{"pessoas": "X pessoas", "orcamento": "R$ X.000", "quando": "mês/ano"}}
+
+Exemplos:
+- "2 pessoas, 10 mil, janeiro 2026" → {{"pessoas": "2 pessoas", "orcamento": "R$ 10.000", "quando": "janeiro 2026"}}
+- "somos 4, orçamento 5000 cada, dezembro" → {{"pessoas": "4 pessoas", "orcamento": "R$ 5.000", "quando": "dezembro"}}
 
 Se alguma informação não estiver clara, use "Não especificado".
 """
