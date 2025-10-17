@@ -409,19 +409,17 @@ def whatsapp_bot():
         tipo_msg = meta.get("tipo_msg", "mensagem") if meta else "mensagem"
         telegram_service.adicionar_mensagem(sender, nome_cliente, incoming_msg, resposta, tipo_msg)
         
-        # Envia notificação urgente se necessário (apenas para tipo "urgente")
-        if tipo_msg == "urgente":
-            print(f"[DEBUG] Enviando notificação urgente para o Telegram")
-            registrar_log("info", f"Atendimento solicitado por {nome_cliente} ({sender})")
-            telegram_service.enviar_mensagem_urgente(
-                "🔴 *URGENTE: Cliente precisa de atendimento especializado!*",
-                nome_cliente,
-                sender
-            )
-
-        # Envia conversa agrupada para o Telegram (com perfil completo)
+        # Envia conversa para o Telegram
+        # Marca tipo de atendimento para diferenciar no dashboard
         if tipo_msg in ["urgente", "atendimento"]:
+            # Atualiza tipo no perfil para diferenciar no Telegram
+            if tipo_msg == "urgente":
+                telegram_service.atualizar_perfil(sender, "Tipo", "🚨 Suporte Direto")
+            else:
+                telegram_service.atualizar_perfil(sender, "Tipo", "✅ Conversão Natural")
+
             telegram_service.enviar_conversa(sender, forcar=True)
+            registrar_log("info", f"Atendimento solicitado por {nome_cliente} ({sender}) - Tipo: {tipo_msg}")
         else:
             telegram_service.enviar_conversa(sender)
         

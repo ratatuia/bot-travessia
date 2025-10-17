@@ -39,7 +39,7 @@ MENUS = {
         "opcoes": [
             "🎯 Descobrir meu cruzeiro ideal - Vamos encontrar a viagem perfeita pra você!",
             "🌊 Conhecer a Travessia - Saiba por que +500 famílias confiaram em nós",
-            "💬 Falar com especialista - Atendimento personalizado agora"
+            "👤 Suporte Especializado - Fale diretamente com nossa equipe"
         ],
         "rodape": "\n💡 Dica: Digite 'menu' a qualquer momento para voltar aqui!"
     },
@@ -129,11 +129,11 @@ MENSAGENS = {
     ),
 
     "atendimento_solicitado": (
-        "🎉 *TUDO CERTO, {nome}!*\n\n"
-        "✅ Sua solicitação foi registrada\n"
-        "✅ Proposta será enviada para {email}\n"
-        "✅ Especialista entrará em contato em breve\n\n"
-        "📞 Atendimento: {horario}\n\n"
+        "✨ *Perfeito, {nome}!*\n\n"
+        "📋 Seus dados foram registrados com sucesso:\n"
+        "📧 {email}\n\n"
+        "👨‍💼 Um especialista da nossa equipe irá entrar em contato em breve para apresentar as melhores opções de cruzeiro personalizadas para você.\n\n"
+        "📞 *Horário de atendimento:*\n{horario}\n\n"
         "💡 *Enquanto isso:*\n"
         "• Visite nosso Instagram @travessiadossonhos\n"
         "• Veja depoimentos de clientes felizes\n"
