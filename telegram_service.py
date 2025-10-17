@@ -1,7 +1,11 @@
 import re
 import requests
 import datetime
+from zoneinfo import ZoneInfo
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+
+# Timezone de Brasília
+BRASIL_TZ = ZoneInfo("America/Sao_Paulo")
 
 def formatar_numero_whatsapp(numero):
     """Formata o número para o formato wa.me"""
@@ -22,17 +26,17 @@ class TelegramService:
     
     def adicionar_mensagem(self, sender, nome_cliente, cliente_msg, bot_msg, tipo="mensagem"):
         """Adiciona mensagem à conversa para envio agrupado"""
-        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        timestamp = datetime.datetime.now(BRASIL_TZ).strftime("%H:%M:%S")
         
         if sender not in self.conversas:
             self.conversas[sender] = {
                 "nome": nome_cliente or "Cliente sem nome",
                 "numero": sender,
                 "mensagens": [],
-                "ultima_atualizacao": datetime.datetime.now(),
+                "ultima_atualizacao": datetime.datetime.now(BRASIL_TZ),
                 "perfil": {}
             }
-        
+
         # Adiciona a mensagem ao histórico
         self.conversas[sender]["mensagens"].append({
             "timestamp": timestamp,
@@ -40,9 +44,9 @@ class TelegramService:
             "bot": bot_msg,
             "tipo": tipo
         })
-        
+
         # Atualiza o timestamp
-        self.conversas[sender]["ultima_atualizacao"] = datetime.datetime.now()
+        self.conversas[sender]["ultima_atualizacao"] = datetime.datetime.now(BRASIL_TZ)
     
     def atualizar_perfil(self, sender, chave, valor):
         """Atualiza informações de perfil do cliente"""
@@ -59,7 +63,7 @@ class TelegramService:
             return False
             
         # Verifica se é hora de enviar (após última mensagem ou forçado)
-        tempo_decorrido = (datetime.datetime.now() - self.conversas[sender]["ultima_atualizacao"]).total_seconds()
+        tempo_decorrido = (datetime.datetime.now(BRASIL_TZ) - self.conversas[sender]["ultima_atualizacao"]).total_seconds()
         if not forcar and tempo_decorrido < 60:  # Aguarda 60 segundos ou envio forçado
             return False
         
@@ -73,7 +77,7 @@ class TelegramService:
             f"💬 *Conversa com Cliente*\n"
             f"👤 *Nome*: {nome}\n"
             f"📱 *Contato*: [{link_whatsapp}](https://{link_whatsapp})\n"
-            f"🕒 *Data*: {datetime.datetime.now().strftime('%d/%m/%Y')}\n"
+            f"🕒 *Data*: {datetime.datetime.now(BRASIL_TZ).strftime('%d/%m/%Y')}\n"
         )
         
         # Adiciona informações de perfil se disponíveis
@@ -163,7 +167,7 @@ class TelegramService:
     def enviar_relatorio_diario(self, stats):
         """Envia relatório diário com estatísticas"""
         try:
-            hoje = datetime.datetime.now().strftime('%d/%m/%Y')
+            hoje = datetime.datetime.now(BRASIL_TZ).strftime('%d/%m/%Y')
 
             mensagem = f"""📊 *Relatório Diário - {hoje}*
 

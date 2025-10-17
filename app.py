@@ -394,26 +394,17 @@ def whatsapp_bot():
         tipo_msg = meta.get("tipo_msg", "mensagem") if meta else "mensagem"
         telegram_service.adicionar_mensagem(sender, nome_cliente, incoming_msg, resposta, tipo_msg)
         
-        # Envia notificação urgente se necessário
+        # Envia notificação urgente se necessário (apenas para tipo "urgente")
         if tipo_msg == "urgente":
             print(f"[DEBUG] Enviando notificação urgente para o Telegram")
             registrar_log("info", f"Atendimento solicitado por {nome_cliente} ({sender})")
             telegram_service.enviar_mensagem_urgente(
-                "🔴 *URGENTE: Cliente precisa de atendimento especializado!*", 
-                nome_cliente, 
+                "🔴 *URGENTE: Cliente precisa de atendimento especializado!*",
+                nome_cliente,
                 sender
             )
-        elif tipo_msg == "atendimento":
-            print(f"[DEBUG] Enviando notificação de atendimento para o Telegram")
-            perfil = telegram_service.conversas.get(sender, {}).get("perfil", {})
-            
-            mensagem_telegram = "✅ *CLIENTE COMPLETOU PLANEJAMENTO DE VIAGEM*\n\n"
-            for chave, valor in perfil.items():
-                mensagem_telegram += f"*{chave}*: {valor}\n"
-            
-            telegram_service.enviar_mensagem_urgente(mensagem_telegram, nome_cliente, sender)
-        
-        # Envia conversa agrupada para o Telegram
+
+        # Envia conversa agrupada para o Telegram (com perfil completo)
         if tipo_msg in ["urgente", "atendimento"]:
             telegram_service.enviar_conversa(sender, forcar=True)
         else:
