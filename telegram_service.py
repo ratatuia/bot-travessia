@@ -7,6 +7,41 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 # Timezone de Brasília
 BRASIL_TZ = ZoneInfo("America/Sao_Paulo")
 
+# Mapeamento de opções numéricas para texto descritivo
+OPCOES_MAPEAMENTO = {
+    "Interesses": {
+        "1": "Gastronomia + Destinos exóticos (Caribe, Bahamas)",
+        "2": "Entretenimento + Diversão (Shows, festas, cassino)",
+        "3": "Relaxamento total (Spa, piscinas, muito descanso)",
+        "4": "Família (Atividades para todas as idades)",
+        "5": "Cultura e história (Europa, Mediterrâneo)",
+        "6": "Experiência completa!"
+    },
+    "Período final": {
+        "1": "Em breve + Mini (3-5 dias) - Escapada rápida!",
+        "2": "Meio do ano + Padrão (6-9 dias) - Equilíbrio perfeito",
+        "3": "Final do ano + Estendido (10-14 dias) - Fim de ano épico!",
+        "4": "Próximo ano + Padrão (6-9 dias) - Planejamento tranquilo",
+        "5": "Ainda não decidi - Me ajuda a escolher!"
+    },
+    "Método de contato": {
+        "1": "WhatsApp (mais rápido)",
+        "2": "Ligação telefônica",
+        "3": "Vídeo-chamada (ideal para ver detalhes do navio)"
+    },
+    "Horário de contato": {
+        "1": "Manhã (9h-12h)",
+        "2": "Horário de almoço (12h-14h)",
+        "3": "Tarde (14h-18h)",
+        "4": "Noite (18h-20h)",
+        "5": "Qualquer horário - estou ansioso(a)!"
+    },
+    "Experiência anterior": {
+        "1": "Sim, sou veterano!",
+        "2": "Não, será minha primeira vez"
+    }
+}
+
 def formatar_numero_whatsapp(numero):
     """Formata o número para o formato wa.me"""
     # Remove "whatsapp:" e caracteres não numéricos
@@ -98,27 +133,15 @@ class TelegramService:
         if perfil_limpo:
             cabecalho += "\n📋 *Perfil*:\n"
             for chave, valor in perfil_limpo.items():
-                cabecalho += f"• {chave}: {valor}\n"
+                # Mapeia valores numéricos para texto descritivo
+                valor_formatado = valor
+                if chave in OPCOES_MAPEAMENTO and str(valor).strip() in OPCOES_MAPEAMENTO[chave]:
+                    valor_formatado = OPCOES_MAPEAMENTO[chave][str(valor).strip()]
 
-        cabecalho += "─────────────\n"
+                cabecalho += f"• {chave}: {valor_formatado}\n"
 
-        # Formata apenas as RESPOSTAS DO CLIENTE (sem mensagens do bot)
-        respostas_cliente = []
-        for msg in self.conversas[sender]["mensagens"]:
-            tempo = msg["timestamp"]
-            cliente_msg = msg['cliente']
-
-            # Adiciona marcador se for atendimento/urgente
-            marcador = ""
-            if msg["tipo"] == "atendimento":
-                marcador = "✅ "
-            elif msg["tipo"] == "urgente":
-                marcador = "🔴 "
-
-            respostas_cliente.append(f"{marcador}*{tempo}*: {cliente_msg}")
-
-        # Junta tudo
-        mensagem_completa = f"{cabecalho}\n💬 *Respostas*:\n" + "\n".join(respostas_cliente)
+        # Mensagem completa apenas com cabeçalho e perfil
+        mensagem_completa = cabecalho
         
         # Envia para o Telegram
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
