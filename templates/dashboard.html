@@ -606,10 +606,14 @@
 
             // Update Activity Chart
             const activityData = data.db_stats.activity_by_hour || {};
-            console.log('📊 Atividade por hora (raw):', activityData);
             const hours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-            const counts = hours.map((h) => activityData[h.substring(0, 2)] || 0);
-            console.log('📊 Counts mapeados:', counts);
+
+            // Mapeia tentando com e sem zero à esquerda (PostgreSQL vs SQLite)
+            const counts = hours.map((h) => {
+                const hourStr = h.substring(0, 2); // "00", "01", "13", "14"
+                const hourNum = parseInt(hourStr, 10).toString(); // "0", "1", "13", "14"
+                return activityData[hourStr] || activityData[hourNum] || 0;
+            });
 
             activityChart.data.labels = hours;
             activityChart.data.datasets[0].data = counts;

@@ -103,11 +103,11 @@ def get_database_stats():
             if USE_POSTGRES:
                 cursor.execute("""
                     SELECT
-                        TO_CHAR(timestamp, 'HH24') as hour,
+                        LPAD(EXTRACT(HOUR FROM timestamp)::text, 2, '0') as hour,
                         COUNT(*) as count
                     FROM mensagens
                     WHERE timestamp >= NOW() - INTERVAL '1 day'
-                    GROUP BY TO_CHAR(timestamp, 'HH24')
+                    GROUP BY EXTRACT(HOUR FROM timestamp)
                     ORDER BY hour
                 """)
             else:
@@ -261,11 +261,11 @@ def api_debug():
             if USE_POSTGRES:
                 cursor.execute("""
                     SELECT
-                        TO_CHAR(timestamp, 'HH24') as hour,
+                        LPAD(EXTRACT(HOUR FROM timestamp)::text, 2, '0') as hour,
                         COUNT(*) as count
                     FROM mensagens
                     WHERE timestamp >= NOW() - INTERVAL '1 day'
-                    GROUP BY TO_CHAR(timestamp, 'HH24')
+                    GROUP BY EXTRACT(HOUR FROM timestamp)
                     ORDER BY hour
                 """)
             else:
