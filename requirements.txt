@@ -11,3 +11,6 @@ gunicorn
 plotly
 bleach
 psycopg2-binary
+pytest
+pytest-cov
+pytest-html

@@ -325,14 +325,7 @@ COMANDOS_ESPECIAIS = {
     "contato": ["falar", "atendimento", "humano", "especialista"]
 }
 
-# NOVO: Emojis de progresso
-def get_progresso(passo_atual, total_passos=5):
-    """Retorna barra de progresso visual"""
-    completo = "━" * passo_atual
-    vazio = "━" * (total_passos - passo_atual)
-    return f"{completo}{vazio} {passo_atual}/{total_passos}"
-
-# NOVO: Detecta comandos especiais na mensagem do usuário
+# Detecta comandos especiais na mensagem do usuário
 def detectar_comando(mensagem):
     """
     Verifica se a mensagem contém um comando especial

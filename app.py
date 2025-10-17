@@ -3,13 +3,13 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from twilio.twiml.messaging_response import MessagingResponse
 import random
-import re
 import datetime
 import json
 import traceback
 import os
 import psutil
 import sqlite3
+import shutil
 
 # Variável global para rastrear quando o bot foi iniciado
 app_start_time = datetime.datetime.now()
@@ -63,11 +63,6 @@ def index():
     return "Bot da Travessia dos Sonhos - Online!", 200
 
 # Funções auxiliares
-def validar_email(email):
-    """Verifica se o e-mail está em um formato válido"""
-    padrao = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(padrao, email) is not None
-
 def validar_opcao_menu(resposta, num_opcoes, incluir_numeros_texto=True):
     """Valida se a resposta é uma opção válida de menu"""
     resposta = resposta.strip().lower()
@@ -172,7 +167,6 @@ def reset_database():
         if os.path.exists(DB_PATH):
             # Backup antes de deletar
             backup_path = f"{DB_PATH}.backup.{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            import shutil
             shutil.copy2(DB_PATH, backup_path)
             registrar_log("info", f"Backup criado em: {backup_path}")
 
@@ -243,7 +237,6 @@ def health_check():
         db_ok = True
         try:
             # Tenta fazer uma consulta simples
-            import sqlite3
             conn = sqlite3.connect(DB_PATH)
             conn.execute("SELECT 1")
             conn.close()
@@ -523,8 +516,10 @@ def processar_mensagem(sender, mensagem, estado_atual):
     elif comando_detectado == "contato":
         print("[DEBUG] Comando 'contato' detectado - redireciona para atendimento")
         novo_estado = {**estado_atual, "estado": "atendimento_solicitado"}
+        email = estado_atual.get("email", "seu email cadastrado")
         resposta = MENSAGENS["atendimento_solicitado"].format(
             nome=nome if nome else "Olá",
+            email=email,
             horario=HORARIO_ATENDIMENTO
         )
         return resposta, novo_estado, {"tipo_msg": "urgente"}
@@ -535,8 +530,10 @@ def processar_mensagem(sender, mensagem, estado_atual):
         # Se o cliente já solicitou atendimento, reenviar a mensagem de confirmação
         # apenas se ele enviar um novo comando de atendimento
         if mensagem == "3" or mensagem.lower() in ["atendimento", "ajuda", "especialista", "falar"]:
+            email = estado_atual.get("email", "seu email cadastrado")
             resposta = MENSAGENS["atendimento_solicitado"].format(
                 nome=nome,
+                email=email,
                 horario=HORARIO_ATENDIMENTO
             )
             return resposta, estado_atual, {"tipo_msg": "urgente"}
@@ -598,26 +595,26 @@ def processar_mensagem(sender, mensagem, estado_atual):
     elif estado == "menu":
         print("[DEBUG] Processando menu")
         # Processa opções do menu principal
-        if mensagem == "1":  # Conhecer tripulação
-            print("[DEBUG] Opção 1 selecionada")
-            novo_estado = {**estado_atual, "estado": "pos_conhecer_tripulacao"}
-            resposta = MENSAGENS["apresentacao_empresa"].format(nome=nome)
+        if mensagem == "1":  # Descobrir cruzeiro ideal (CORRIGIDO)
+            print("[DEBUG] Opção 1 selecionada - Descobrir cruzeiro ideal")
+            novo_estado = {**estado_atual, "estado": "qualificacao_inicial"}
+            # Formata a nova pergunta combinada usando MENUS (não MENSAGENS)
+            resposta = formatar_menu("qualificacao_inicial", nome)
             return resposta, novo_estado, {}
 
-        elif mensagem == "2":  # Iniciar viagem (NOVA QUALIFICAÇÃO)
-            print("[DEBUG] Opção 2 selecionada - nova qualificação inicial")
-            novo_estado = {**estado_atual, "estado": "qualificacao_inicial"}
-            # Formata a nova pergunta combinada
-            from config import get_progresso
-            qualif = MENSAGENS["qualificacao_inicial"]
-            resposta = f"{qualif['titulo']}\n\n{qualif['pergunta']}"
+        elif mensagem == "2":  # Conhecer a Travessia (CORRIGIDO)
+            print("[DEBUG] Opção 2 selecionada - Conhecer a Travessia")
+            novo_estado = {**estado_atual, "estado": "pos_conhecer_tripulacao"}
+            resposta = MENSAGENS["apresentacao_empresa"].format(nome=nome)
             return resposta, novo_estado, {}
 
         elif mensagem == "3":  # Solicitar atendimento
             print("[DEBUG] Opção 3 selecionada")
             novo_estado = {**estado_atual, "estado": "atendimento_solicitado"}
+            email = estado_atual.get("email", "seu email cadastrado")
             resposta = MENSAGENS["atendimento_solicitado"].format(
                 nome=nome,
+                email=email,
                 horario=HORARIO_ATENDIMENTO
             )
             # Aqui metadados indicam que é uma mensagem urgente
@@ -660,9 +657,9 @@ def processar_mensagem(sender, mensagem, estado_atual):
         else:
             resposta_inicial = MENSAGENS.get("resposta_primeira_vez", "Que emoção! Sua primeira vez será inesquecível!").format(nome=nome)
 
-        # Adiciona a pergunta de qualificação
-        qualif = MENSAGENS["qualificacao_inicial"]
-        resposta = f"{resposta_inicial}\n\n{qualif['titulo']}\n\n{qualif['pergunta']}"
+        # Adiciona a pergunta de qualificação (usa formatar_menu pois está em MENUS)
+        menu_qualif = formatar_menu("qualificacao_inicial", nome)
+        resposta = f"{resposta_inicial}\n\n{menu_qualif}"
 
         print("[DEBUG] Indo para qualificacao_inicial")
         return resposta, novo_estado, {}
@@ -689,7 +686,6 @@ Se alguma informação não estiver clara, use "Não especificado".
             print(f"[DEBUG] Resposta IA: {resposta_ia}")
 
             # Tenta parsear JSON
-            import json
             try:
                 dados = json.loads(resposta_ia)
                 pessoas = dados.get("pessoas", "Não especificado")
@@ -716,8 +712,6 @@ Se alguma informação não estiver clara, use "Não especificado".
             telegram_service.atualizar_perfil(sender, "Quando viajar", quando)
 
             # Próxima pergunta: experiência desejada (combina interesses + destino)
-            from config import get_progresso
-            exp = MENSAGENS["experiencia_desejada"]
             resposta = (
                 f"✅ Ótimo, {nome}!\n\n"
                 f"📊 Entendi:\n"
@@ -725,8 +719,7 @@ Se alguma informação não estiver clara, use "Não especificado".
                 f"• Orçamento: {orcamento}\n"
                 f"• Período: {quando}\n\n"
                 f"─────────────\n\n"
-                f"{exp['titulo']}\n\n"
-                f"{exp['pergunta']}"
+                f"{formatar_menu('experiencia_desejada', nome)}"
             )
 
             return resposta, novo_estado, {}
@@ -759,9 +752,7 @@ Se alguma informação não estiver clara, use "Não especificado".
         telegram_service.atualizar_perfil(sender, "Interesses", mensagem[:100])
 
         # Próxima pergunta: quando e quanto tempo
-        from config import get_progresso
-        quando_qt = MENSAGENS["quando_quanto_tempo"]
-        resposta = f"{quando_qt['titulo']}\n\n{quando_qt['pergunta']}"
+        resposta = formatar_menu("quando_quanto_tempo", nome)
 
         return resposta, novo_estado, {}
 
@@ -782,7 +773,6 @@ Responda APENAS JSON:
 """
             resposta_ia = ai_service.gerar_resposta_simples(prompt_extracao)
 
-            import json
             try:
                 dados = json.loads(resposta_ia)
                 quando = dados.get("quando", mensagem)
