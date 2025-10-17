@@ -6,8 +6,10 @@ API endpoints para alimentar o dashboard de observabilidade
 from flask import Blueprint, render_template, jsonify
 import os
 import json
-import sqlite3
 from datetime import datetime, timedelta
+
+# Importa funções do database.py que já suportam PostgreSQL/SQLite
+from database import get_connection, get_cursor, USE_POSTGRES
 
 # Blueprint para rotas do dashboard
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -39,77 +41,97 @@ def load_metrics():
 
 
 def get_database_stats():
-    """Carrega estatísticas do banco de dados"""
-    if not os.path.exists(DB_PATH):
-        return {
-            'total_clients': 0,
-            'clients_24h': 0,
-            'messages_24h': 0,
-            'conversion_rate': 0,
-            'clients_by_state': {},
-            'activity_by_hour': {}
-        }
-
+    """Carrega estatísticas do banco de dados (PostgreSQL ou SQLite)"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        with get_connection() as conn:
+            cursor = get_cursor(conn)
 
-        stats = {}
+            stats = {}
 
-        # Total de clientes
-        cursor.execute("SELECT COUNT(*) FROM clientes")
-        stats['total_clients'] = cursor.fetchone()[0]
+            # Total de clientes
+            cursor.execute("SELECT COUNT(*) FROM clientes")
+            result = cursor.fetchone()
+            stats['total_clients'] = result['count'] if USE_POSTGRES else result[0]
 
-        # Clientes nas últimas 24h
-        cursor.execute("""
-            SELECT COUNT(*) FROM clientes
-            WHERE datetime(ultima_interacao) >= datetime('now', '-1 day')
-        """)
-        stats['clients_24h'] = cursor.fetchone()[0]
+            # Clientes nas últimas 24h
+            if USE_POSTGRES:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM clientes
+                    WHERE ultima_interacao >= NOW() - INTERVAL '1 day'
+                """)
+            else:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM clientes
+                    WHERE datetime(ultima_interacao) >= datetime('now', '-1 day')
+                """)
+            result = cursor.fetchone()
+            stats['clients_24h'] = result['count'] if USE_POSTGRES else result[0]
 
-        # Mensagens nas últimas 24h
-        cursor.execute("""
-            SELECT COUNT(*) FROM mensagens
-            WHERE datetime(timestamp) >= datetime('now', '-1 day')
-        """)
-        stats['messages_24h'] = cursor.fetchone()[0]
+            # Mensagens nas últimas 24h
+            if USE_POSTGRES:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM mensagens
+                    WHERE timestamp >= NOW() - INTERVAL '1 day'
+                """)
+            else:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM mensagens
+                    WHERE datetime(timestamp) >= datetime('now', '-1 day')
+                """)
+            result = cursor.fetchone()
+            stats['messages_24h'] = result['count'] if USE_POSTGRES else result[0]
 
-        # Taxa de conversão
-        cursor.execute("""
-            SELECT COUNT(*) FROM clientes
-            WHERE json_extract(dados, '$.estado') = 'atendimento_solicitado'
-        """)
-        completed = cursor.fetchone()[0]
-        stats['conversion_rate'] = (completed / stats['total_clients'] * 100) if stats['total_clients'] > 0 else 0
+            # Taxa de conversão (clientes que solicitaram atendimento)
+            cursor.execute(
+                "SELECT COUNT(*) FROM clientes WHERE estado = %s" if USE_POSTGRES
+                else "SELECT COUNT(*) FROM clientes WHERE estado = ?",
+                ('atendimento_solicitado',)
+            )
+            result = cursor.fetchone()
+            completed = result['count'] if USE_POSTGRES else result[0]
+            stats['conversion_rate'] = (completed / stats['total_clients'] * 100) if stats['total_clients'] > 0 else 0
 
-        # Clientes por estado
-        cursor.execute("""
-            SELECT
-                json_extract(dados, '$.estado') as estado,
-                COUNT(*) as count
-            FROM clientes
-            WHERE dados IS NOT NULL AND json_extract(dados, '$.estado') IS NOT NULL
-            GROUP BY estado
-        """)
-        stats['clients_by_state'] = dict(cursor.fetchall())
+            # Clientes por estado
+            cursor.execute("SELECT estado, COUNT(*) as count FROM clientes WHERE estado IS NOT NULL GROUP BY estado")
+            results = cursor.fetchall()
+            if USE_POSTGRES:
+                stats['clients_by_state'] = {row['estado']: row['count'] for row in results}
+            else:
+                stats['clients_by_state'] = dict(results)
 
-        # Atividade por hora (últimas 24h)
-        cursor.execute("""
-            SELECT
-                strftime('%H', timestamp) as hour,
-                COUNT(*) as count
-            FROM mensagens
-            WHERE datetime(timestamp) >= datetime('now', '-1 day')
-            GROUP BY hour
-            ORDER BY hour
-        """)
-        stats['activity_by_hour'] = dict(cursor.fetchall())
+            # Atividade por hora (últimas 24h)
+            if USE_POSTGRES:
+                cursor.execute("""
+                    SELECT
+                        TO_CHAR(timestamp, 'HH24') as hour,
+                        COUNT(*) as count
+                    FROM mensagens
+                    WHERE timestamp >= NOW() - INTERVAL '1 day'
+                    GROUP BY TO_CHAR(timestamp, 'HH24')
+                    ORDER BY hour
+                """)
+            else:
+                cursor.execute("""
+                    SELECT
+                        strftime('%H', timestamp) as hour,
+                        COUNT(*) as count
+                    FROM mensagens
+                    WHERE datetime(timestamp) >= datetime('now', '-1 day')
+                    GROUP BY hour
+                    ORDER BY hour
+                """)
+            results = cursor.fetchall()
+            if USE_POSTGRES:
+                stats['activity_by_hour'] = {row['hour']: row['count'] for row in results}
+            else:
+                stats['activity_by_hour'] = dict(results)
 
-        conn.close()
-        return stats
+            return stats
 
     except Exception as e:
         print(f"Erro ao carregar stats do banco: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'total_clients': 0,
             'clients_24h': 0,
@@ -122,8 +144,18 @@ def get_database_stats():
 
 def get_health_status():
     """Verifica saúde dos componentes"""
+    # Database check - tenta conexão
+    database_ok = False
+    try:
+        with get_connection() as conn:
+            cursor = get_cursor(conn)
+            cursor.execute("SELECT 1")
+            database_ok = True
+    except:
+        database_ok = False
+
     return {
-        'database': os.path.exists(DB_PATH),
+        'database': database_ok,
         'logs': os.path.exists('logs/bot.log'),
         'metrics': os.path.exists(METRICS_FILE)
     }
@@ -193,25 +225,19 @@ def detailed_health():
         'checks': {}
     }
 
-    # Database check
+    # Database check (PostgreSQL ou SQLite)
     try:
-        if os.path.exists(DB_PATH):
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
+        with get_connection() as conn:
+            cursor = get_cursor(conn)
             cursor.execute("SELECT COUNT(*) FROM clientes")
-            count = cursor.fetchone()[0]
-            conn.close()
+            result = cursor.fetchone()
+            count = result['count'] if USE_POSTGRES else result[0]
 
+            db_type = "PostgreSQL" if USE_POSTGRES else "SQLite"
             health['checks']['database'] = {
                 'status': 'pass',
-                'message': f'{count} clientes registrados'
+                'message': f'{count} clientes registrados ({db_type})'
             }
-        else:
-            health['checks']['database'] = {
-                'status': 'fail',
-                'message': 'Database file not found'
-            }
-            health['status'] = 'degraded'
     except Exception as e:
         health['checks']['database'] = {
             'status': 'error',
