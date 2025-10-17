@@ -27,7 +27,7 @@ class TelegramService:
     def adicionar_mensagem(self, sender, nome_cliente, cliente_msg, bot_msg, tipo="mensagem"):
         """Adiciona mensagem à conversa para envio agrupado"""
         timestamp = datetime.datetime.now(BRASIL_TZ).strftime("%H:%M:%S")
-        
+
         if sender not in self.conversas:
             self.conversas[sender] = {
                 "nome": nome_cliente or "Cliente sem nome",
@@ -36,6 +36,10 @@ class TelegramService:
                 "ultima_atualizacao": datetime.datetime.now(BRASIL_TZ),
                 "perfil": {}
             }
+
+        # Atualiza nome se vier diferente de "Novo cliente" ou genérico
+        if nome_cliente and nome_cliente != "Novo cliente" and nome_cliente != "Cliente sem nome":
+            self.conversas[sender]["nome"] = nome_cliente
 
         # Adiciona a mensagem ao histórico
         self.conversas[sender]["mensagens"].append({
@@ -74,38 +78,47 @@ class TelegramService:
         
         # Formata o cabeçalho
         cabecalho = (
-            f"💬 *Conversa com Cliente*\n"
-            f"👤 *Nome*: {nome}\n"
-            f"📱 *Contato*: [{link_whatsapp}](https://{link_whatsapp})\n"
-            f"🕒 *Data*: {datetime.datetime.now(BRASIL_TZ).strftime('%d/%m/%Y')}\n"
+            f"{'✅' if self.conversas[sender]['mensagens'][-1].get('tipo') == 'atendimento' else '🔔'} "
+            f"*{nome.upper()}*\n"
+            f"📱 [{link_whatsapp}](https://{link_whatsapp})\n"
+            f"🕒 {datetime.datetime.now(BRASIL_TZ).strftime('%d/%m/%Y %H:%M')}\n"
         )
-        
-        # Adiciona informações de perfil se disponíveis
+
+        # Filtra e limpa informações de perfil
+        perfil_limpo = {}
+        campos_invalidos = ["Não especificado", "X dias", "período", "mês/ano", "mês/período"]
+
         if self.conversas[sender]["perfil"]:
-            cabecalho += "\n📋 *Perfil do Cliente*:\n"
             for chave, valor in self.conversas[sender]["perfil"].items():
-                cabecalho += f"- *{chave}*: {valor}\n"
-        
-        cabecalho += "➖➖➖➖➖➖➖➖➖➖➖➖"
-        
-        # Formata as mensagens
-        conteudo_mensagens = []
+                # Remove campos com valores genéricos/inválidos
+                if valor and valor not in campos_invalidos:
+                    perfil_limpo[chave] = valor
+
+        # Adiciona perfil se tiver dados válidos
+        if perfil_limpo:
+            cabecalho += "\n📋 *Perfil*:\n"
+            for chave, valor in perfil_limpo.items():
+                cabecalho += f"• {chave}: {valor}\n"
+
+        cabecalho += "─────────────\n"
+
+        # Formata apenas as RESPOSTAS DO CLIENTE (sem mensagens do bot)
+        respostas_cliente = []
         for msg in self.conversas[sender]["mensagens"]:
             tempo = msg["timestamp"]
-            tipo = ""
+            cliente_msg = msg['cliente']
+
+            # Adiciona marcador se for atendimento/urgente
+            marcador = ""
             if msg["tipo"] == "atendimento":
-                tipo = "⚠️ *ATENDIMENTO SOLICITADO*"
+                marcador = "✅ "
             elif msg["tipo"] == "urgente":
-                tipo = "🔴 *URGENTE*"
-            
-            conteudo_mensagens.append(
-                f"{tipo}\n"
-                f"*{tempo}* Cliente: {msg['cliente']}\n"
-                f"*{tempo}* Bot: {msg['bot']}"
-            )
-        
+                marcador = "🔴 "
+
+            respostas_cliente.append(f"{marcador}*{tempo}*: {cliente_msg}")
+
         # Junta tudo
-        mensagem_completa = f"{cabecalho}\n\n" + "\n\n".join(conteudo_mensagens)
+        mensagem_completa = f"{cabecalho}\n💬 *Respostas*:\n" + "\n".join(respostas_cliente)
         
         # Envia para o Telegram
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
