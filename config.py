@@ -147,7 +147,6 @@ MENSAGENS = {
         "É isso que a Travessia dos Sonhos faz!\n\n"
         "🏆 *Por que somos diferentes:*\n\n"
         "✅ *+500 famílias* já realizaram sonho conosco\n"
-        "⭐ *4.9/5 estrelas* no Google (veja depoimentos!)\n"
         "🎯 *100% especialistas* em cruzeiros\n"
         "💎 *Suporte 24/7* durante SUA viagem\n"
         "💰 *Melhores condições* de pagamento\n\n"
