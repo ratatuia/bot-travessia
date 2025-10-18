@@ -358,24 +358,25 @@ def whatsapp_bot():
             registrar_log("info", f"Nova conversa iniciada com {sender}")
             # Inicia nova conversa
             update_client_state(sender, {"estado": "aguardando_nome"})
-            
-            # Limpa conversa Telegram existente se houver
-            telegram_service.enviar_conversa(sender, forcar=True)
-            
+
+            # Limpa histórico de conversa anterior (mas NÃO envia)
+            if sender in telegram_service.conversas:
+                telegram_service.conversas[sender]["mensagens"] = []
+
             # Prepara resposta com logo
             resp = MessagingResponse()
             msg = resp.message()
             msg.media(LOGO_URL)
             msg.body(MENSAGENS["boas_vindas"])
-            
-            # Adiciona mensagem ao Telegram
+
+            # Adiciona mensagem ao Telegram (mas não envia ainda)
             telegram_service.adicionar_mensagem(
-                sender, 
-                "Novo cliente", 
-                incoming_msg, 
+                sender,
+                "Novo cliente",
+                incoming_msg,
                 MENSAGENS["boas_vindas"]
             )
-            
+
             return str(resp)
         
         # Obtém o estado atual do cliente
