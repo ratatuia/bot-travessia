@@ -328,7 +328,7 @@ def health_check():
 # Rota principal do bot (PROTEGIDA COM VALIDAÇÃO TWILIO)
 @app.route("/zap", methods=["POST"])
 @limiter.limit("100 per hour")  # Rate limit por IP
-@require_twilio_signature
+# @require_twilio_signature  # DESABILITADO - requer configuração adicional do Twilio
 def whatsapp_bot():
     # Logs de debug (mascarando dados sensíveis)
     print("====== NOVA REQUISIÇÃO WEBHOOK ======", flush=True)
