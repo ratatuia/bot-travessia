@@ -111,7 +111,7 @@ MENUS = {
 MENSAGENS = {
     "boas_vindas": (
         "🌊✨ *Travessia dos Sonhos* ✨🌊\n\n"
-        "Imagine acordar numa cidade DIFERENTE a cada dia,\n"
+        "Imagine acordar numa cidade DIFERENTE a cada dia, "
         "sem desfazer malas... 🧳\n\n"
         "É isso que fazemos REALIDADE! 🚢\n\n"
         "✍️ Pra começar, qual seu *nome*?"

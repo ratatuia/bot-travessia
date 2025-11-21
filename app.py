@@ -581,13 +581,13 @@ def processar_mensagem(sender, mensagem, estado_atual):
             )
             return resposta, estado_atual, {}
 
-        # Captura o nome válido
-        novo_estado = {"nome": nome_sanitizado, "estado": "aguardando_email"}
-        resposta = MENSAGENS["pedir_email"].format(nome=nome_sanitizado)
+        # Captura o nome válido e vai direto para o menu (email depois)
+        novo_estado = {"nome": nome_sanitizado, "estado": "menu"}
+        resposta = formatar_menu("principal", nome_sanitizado)
         return resposta, novo_estado, {}
         
-    elif estado == "aguardando_email":
-        print("[DEBUG] Processando aguardando_email")
+    elif estado == "aguardando_email" or estado == "aguardando_email_final":
+        print(f"[DEBUG] Processando {estado}")
 
         # Sanitiza email
         email_sanitizado = sanitize_text(mensagem, max_length=254).lower()
@@ -599,14 +599,36 @@ def processar_mensagem(sender, mensagem, estado_atual):
             return resposta, estado_atual, {}
 
         print("[DEBUG] Email válido")
+
+        # Atualiza Telegram
+        telegram_service.atualizar_perfil(sender, "Email", email_sanitizado)
+
+        # Se era aguardando_email_final, finaliza o atendimento
+        if estado == "aguardando_email_final":
+            novo_estado = {
+                **estado_atual,
+                "email": email_sanitizado,
+                "estado": "atendimento_solicitado"
+            }
+            metodo = estado_atual.get("metodo_contato", "WhatsApp")
+            horario = estado_atual.get("horario_contato", "Qualquer horário")
+
+            resposta = (
+                f"✅ Perfeito, {nome}! Seus dados foram registrados com sucesso.\n\n"
+                f"Um de nossos especialistas entrará em contato em breve conforme sua preferência "
+                f"({metodo} no horário {horario}).\n\n"
+                f"Obrigado por escolher a Travessia dos Sonhos para sua próxima aventura marítima! 🚢✨"
+            )
+            return resposta, novo_estado, {"tipo_msg": "atendimento"}
+
+        # Se era aguardando_email normal (não usado mais, mas mantém por segurança)
         novo_estado = {
-            "nome": nome,
+            **estado_atual,
             "email": email_sanitizado,
             "estado": "menu"
         }
 
         resposta = formatar_menu("principal", nome)
-        telegram_service.atualizar_perfil(sender, "Email", email_sanitizado)
 
         return resposta, novo_estado, {}
         
@@ -895,15 +917,26 @@ Responda APENAS JSON:
         # Registra o horário desejado
         horario = opcoes_horario.get(opcao)
         metodo = estado_atual.get("metodo_contato", "Não especificado")
-        
+
+        # Atualiza Telegram
+        telegram_service.atualizar_perfil(sender, "Horário de contato", horario)
+
+        # Verifica se já tem email, senão pede agora
+        if not estado_atual.get("email"):
+            novo_estado = {
+                **estado_atual,
+                "estado": "aguardando_email_final",
+                "horario_contato": horario
+            }
+            resposta = MENSAGENS["pedir_email"].format(nome=nome)
+            return resposta, novo_estado, {}
+
+        # Se já tem email, finaliza
         novo_estado = {
             **estado_atual,
             "estado": "atendimento_solicitado",
             "horario_contato": horario
         }
-        
-        # Atualiza Telegram
-        telegram_service.atualizar_perfil(sender, "Horário de contato", horario)
         
         # Resposta final
         resposta = (
