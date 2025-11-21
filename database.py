@@ -15,13 +15,28 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres"):
     # PostgreSQL
     import psycopg2
     from psycopg2.extras import RealDictCursor
+    from psycopg2 import pool
     USE_POSTGRES = True
     print("🐘 Usando PostgreSQL")
+
+    # Connection Pool - mantém 5 conexões sempre abertas, máximo 20
+    try:
+        connection_pool = pool.ThreadedConnectionPool(
+            minconn=5,
+            maxconn=20,
+            dsn=DATABASE_URL,
+            sslmode='require'
+        )
+        print("✅ Connection pool criado: 5-20 conexões")
+    except Exception as e:
+        print(f"❌ Erro ao criar connection pool: {e}")
+        connection_pool = None
 else:
     # SQLite (desenvolvimento)
     import sqlite3
     from config import DB_PATH
     USE_POSTGRES = False
+    connection_pool = None
     print("📁 Usando SQLite (desenvolvimento)")
 
 
@@ -31,17 +46,31 @@ else:
 
 @contextmanager
 def get_connection():
-    """Context manager para gerenciar conexões de banco"""
+    """Context manager para gerenciar conexões de banco com pooling"""
     if USE_POSTGRES:
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
+        # Usa connection pool se disponível
+        if connection_pool:
+            conn = connection_pool.getconn()
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                raise e
+            finally:
+                # Devolve conexão ao pool ao invés de fechar
+                connection_pool.putconn(conn)
+        else:
+            # Fallback: conexão direta sem pool
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            try:
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                raise e
+            finally:
+                conn.close()
     else:
         conn = sqlite3.connect(DB_PATH)
         try:

@@ -9,7 +9,7 @@ class AIService:
 
         # Define fallback para o circuit breaker
         openai_circuit.fallback = self._fallback_resposta
-    
+
     def _fallback_resposta(self, nome_cliente, mensagem, contexto):
         """
         Fallback quando OpenAI está indisponível
@@ -57,9 +57,9 @@ class AIService:
         try:
             # Prepara contexto da base de conhecimento
             context_formatted = "\n\n".join([f"### {k}\n{v}" for k, v in contexto.items()])
-            
+
             nome_prefix = f"Olá {nome_cliente}, " if nome_cliente else ""
-            
+
             # Cria o prompt para a OpenAI
             prompt = f"""
             Você é um assistente da agência Travessia dos Sonhos, especializada em cruzeiros marítimos.
@@ -67,7 +67,7 @@ class AIService:
             Pergunta: "{mensagem}"
             Base de conhecimento:
             {context_formatted}
-            
+
             Regras importantes:
             1. Responda de forma concisa e amigável (máximo 3 frases)
             2. NÃO mencione nenhuma companhia de cruzeiros específica (como MSC, Royal Caribbean, etc)
@@ -76,7 +76,7 @@ class AIService:
             5. Mantenha o tom cordial mas OBJETIVO e BREVE
             6. Use emojis para tornar a resposta mais amigável e visual
             """
-            
+
             # Obtém resposta da IA
             resposta = self.client.chat.completions.create(
                 model="gpt-4o",
@@ -84,9 +84,9 @@ class AIService:
                 temperature=0.5,
                 max_tokens=100
             ).choices[0].message.content.strip()
-            
+
             return resposta
-            
+
         except Exception as e:
             print(f"[ERRO GPT] {e}")
             return f"⚠️ {'Olá' if not nome_cliente else nome_cliente}, desculpe, tivemos um probleminha técnico. Pode tentar novamente em instantes?"

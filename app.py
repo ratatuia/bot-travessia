@@ -22,8 +22,16 @@ app_start_time = datetime.datetime.now()
 # Importações dos módulos do projeto
 from config import LOGO_URL, HORARIO_ATENDIMENTO, RESPOSTAS_INVALIDAS, MENUS, MENSAGENS, BASE_CONHECIMENTO, DB_PATH
 from database import init_db, get_client_state, update_client_state, save_message
-from telegram_service import TelegramService
-from openai_service import AIService
+
+# Services (nova estrutura)
+try:
+    from services import AIService, TelegramService, LeadScoringService
+except ImportError:
+    # Fallback para estrutura antiga durante transição
+    from telegram_service import TelegramService
+    from openai_service import AIService
+    LeadScoringService = None
+
 from log_service import registrar_log, capturar_erro
 
 # Importa observability para inicializar logging em arquivo
